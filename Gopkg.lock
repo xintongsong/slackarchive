@@ -3,133 +3,202 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/dutchcoders/slack"
-  packages = ["."]
-  revision = "85163694f523bb3bb10e60bbc5b34fe7da3c6bc0"
-
-[[projects]]
-  branch = "master"
+  digest = "1:080dd88339142d3592ac75b2ffafc76f83bc0863bfcba789a071597ede1e85d4"
   name = "github.com/dutchcoders/slackarchive-app"
   packages = ["."]
+  pruneopts = ""
   revision = "c7420b6a994e14d45b1413948b67f32d61a90a7d"
 
 [[projects]]
+  digest = "1:044b2f1eea2f5cfb0d3678baf60892734f59d5c2ea3932cb6ed894a97ccba15c"
   name = "github.com/elazarl/go-bindata-assetfs"
   packages = ["."]
+  pruneopts = ""
   revision = "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:24f8932912fd9331367d38715bb74be889dc2f94d401109c3aa3db8b3aa246c5"
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
+  pruneopts = ""
   revision = "a0583e0143b1624142adab07e0e97fe106d99561"
   version = "v1.3"
 
 [[projects]]
+  digest = "1:20ed7daa9b3b38b6d1d39b48ab3fd31122be5419461470d0c28de3e121c93ecf"
   name = "github.com/gorilla/context"
   packages = ["."]
+  pruneopts = ""
   revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
   version = "v1.1"
 
 [[projects]]
+  digest = "1:aa016bbb412f496a7baed9e02787a60cd15c9a3edfa72da9c4a95d6cea610334"
   name = "github.com/gorilla/mux"
   packages = ["."]
+  pruneopts = ""
   revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
   version = "v1.6.1"
 
 [[projects]]
+  digest = "1:51a1d17ba9fe6648d9fdd5b822baa616d6ec7f28c8669c2091126d206796b5ae"
   name = "github.com/gorilla/securecookie"
   packages = ["."]
+  pruneopts = ""
   revision = "e59506cc896acb7f7bf732d4fdf5e25f7ccd8983"
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:bfb5530b06be15a20de32e6c946eddc2d81693980c79205bcda3bd37fe1a931c"
   name = "github.com/gorilla/sessions"
   packages = ["."]
+  pruneopts = ""
   revision = "ca9ada44574153444b00d3fd9c8559e4cc95f896"
   version = "v1.1"
 
 [[projects]]
+  digest = "1:64d212c703a2b94054be0ce470303286b177ad260b2f89a307e3d1bb6c073ef6"
   name = "github.com/gorilla/websocket"
   packages = ["."]
+  pruneopts = ""
   revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
   version = "v1.2.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:88b08acd12881269e1d48265382fe6aad78d9d3e6145c8badea7dd1abe111de5"
   name = "github.com/mailru/easyjson"
-  packages = [".","buffer","jlexer","jwriter"]
+  packages = [
+    ".",
+    "buffer",
+    "jlexer",
+    "jwriter",
+  ]
+  pruneopts = ""
   revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
 
 [[projects]]
+  digest = "1:53f0ca8536bff15e4974b90def20012f61ef4fdb40b8b2712fa09c2820e53974"
   name = "github.com/nlopes/slack"
   packages = ["."]
+  pruneopts = ""
   revision = "c86337c0ef2486a15edd804355d9c73d2f2caed1"
   version = "v0.1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:55c48c9cfdf8bab6f4911f621616fbe223c0b72a6df9aab6b172ab7e5cfc6bd2"
   name = "github.com/nu7hatch/gouuid"
   packages = ["."]
+  pruneopts = ""
   revision = "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
 
 [[projects]]
+  digest = "1:8e4f739f290a3d6f38b7b6d8f704be3fbff599f755e16745a1983f3e6e1b0b7e"
   name = "github.com/op/go-logging"
   packages = ["."]
+  pruneopts = ""
   revision = "b2cb9fa56473e98db8caba80237377e83fe44db5"
   version = "v1"
 
 [[projects]]
+  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = ""
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:5fb6a3ee2d570d27813518d1986032d4d09c07e9660948d426c371aa445bae37"
   name = "github.com/tappleby/slack_auth_proxy"
   packages = ["slack"]
+  pruneopts = ""
   revision = "8628dfb9b447e59867ca96d52d5e1fc3bfea01d9"
 
 [[projects]]
   branch = "master"
+  digest = "1:6e0e3009ce4d1b88fc753ff93d5aa5cf3e09f59c8cd7bc5aeebb48fc7b07816b"
   name = "golang.org/x/crypto"
-  packages = ["acme","acme/autocert"]
+  packages = [
+    "acme",
+    "acme/autocert",
+  ]
+  pruneopts = ""
   revision = "ae8bce0030810cf999bb2b9868ae5c7c58e6343b"
 
 [[projects]]
   branch = "master"
+  digest = "1:80ec738f420f13c23460cc92cd893d3e403588c60682afebbd4515eca5e19578"
   name = "golang.org/x/net"
   packages = ["websocket"]
+  pruneopts = ""
   revision = "5f9ae10d9af5b1c89ae6904293b14b064d4ada23"
 
 [[projects]]
   branch = "v2"
+  digest = "1:c80894778314c7fb90d94a5ab925214900e1341afeddc953cda7398b8cdcd006"
   name = "gopkg.in/mgo.v2"
-  packages = [".","bson","internal/json","internal/sasl","internal/scram"]
+  packages = [
+    ".",
+    "bson",
+    "internal/json",
+    "internal/sasl",
+    "internal/scram",
+  ]
+  pruneopts = ""
   revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
 
 [[projects]]
+  digest = "1:4e90218c0a3d5d68827237a9308588b4751867515494faa381703b5a290dbf3d"
   name = "gopkg.in/olivere/elastic.v5"
-  packages = [".","config","uritemplates"]
+  packages = [
+    ".",
+    "config",
+    "uritemplates",
+  ]
+  pruneopts = ""
   revision = "2562d7254d4655c3bcf34810cdb4ca45e944d53f"
   version = "v5.0.68"
 
 [[projects]]
+  digest = "1:e85837cb04b78f61688c6eba93ea9d14f60d611e2aaf8319999b1a60d2dafbfa"
   name = "gopkg.in/urfave/cli.v1"
   packages = ["."]
+  pruneopts = ""
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
   version = "v1.20.0"
 
 [[projects]]
+  branch = "v2"
+  digest = "1:cedccf16b71e86db87a24f8d4c70b0a855872eb967cb906a66b95de56aefbd0d"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
-  version = "v2.2.1"
+  pruneopts = ""
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9514922e851ce673b16c80f39402355e2496a00a1860e016f0b75bbe6751190c"
+  input-imports = [
+    "github.com/dutchcoders/slackarchive-app",
+    "github.com/elazarl/go-bindata-assetfs",
+    "github.com/go-sql-driver/mysql",
+    "github.com/gorilla/mux",
+    "github.com/gorilla/sessions",
+    "github.com/gorilla/websocket",
+    "github.com/nlopes/slack",
+    "github.com/nu7hatch/gouuid",
+    "github.com/op/go-logging",
+    "github.com/tappleby/slack_auth_proxy/slack",
+    "golang.org/x/crypto/acme/autocert",
+    "gopkg.in/mgo.v2",
+    "gopkg.in/mgo.v2/bson",
+    "gopkg.in/olivere/elastic.v5",
+    "gopkg.in/urfave/cli.v1",
+    "gopkg.in/yaml.v2",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

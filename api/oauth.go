@@ -8,8 +8,8 @@ import (
 
 	"github.com/dutchcoders/slackarchive/utils"
 
-	"github.com/dutchcoders/slack"
 	"github.com/gorilla/sessions"
+	"github.com/nlopes/slack"
 )
 
 type Cookie interface {
