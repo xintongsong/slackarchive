@@ -64,6 +64,10 @@
 ## what source location any dependent projects specify.
 # source = "https://github.com/myfork/package.git"
 
+[prune]
+  non-go = true
+  go-tests = true
+
 
 [[constraint]]
   branch = "master"

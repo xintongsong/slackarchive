@@ -3,71 +3,71 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:080dd88339142d3592ac75b2ffafc76f83bc0863bfcba789a071597ede1e85d4"
+  digest = "1:c418182de14fd813c97d854dc08bcbc4bb96ae171aeeb735919ea6806fffbca1"
   name = "github.com/dutchcoders/slackarchive-app"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "c7420b6a994e14d45b1413948b67f32d61a90a7d"
 
 [[projects]]
-  digest = "1:044b2f1eea2f5cfb0d3678baf60892734f59d5c2ea3932cb6ed894a97ccba15c"
+  digest = "1:68eafbfc109c68b869e308ed5147b616bac624a48d2c07af7accca6e4052d79e"
   name = "github.com/elazarl/go-bindata-assetfs"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43"
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:24f8932912fd9331367d38715bb74be889dc2f94d401109c3aa3db8b3aa246c5"
+  digest = "1:1c9db302f5e172d283a37560842163450a1ebfd478581afa4f7bf00882c93a39"
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "a0583e0143b1624142adab07e0e97fe106d99561"
   version = "v1.3"
 
 [[projects]]
-  digest = "1:20ed7daa9b3b38b6d1d39b48ab3fd31122be5419461470d0c28de3e121c93ecf"
+  digest = "1:dbd86d229eacaa86a98b10f8fb3e3fc69a1913e0f4e010e7cc1f92bf12edca92"
   name = "github.com/gorilla/context"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
   version = "v1.1"
 
 [[projects]]
-  digest = "1:aa016bbb412f496a7baed9e02787a60cd15c9a3edfa72da9c4a95d6cea610334"
+  digest = "1:eced3d718020962f1cc6ac109b840ba17dc817a291062b5948ba7aecc8c6665d"
   name = "github.com/gorilla/mux"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
   version = "v1.6.1"
 
 [[projects]]
-  digest = "1:51a1d17ba9fe6648d9fdd5b822baa616d6ec7f28c8669c2091126d206796b5ae"
+  digest = "1:6cfd35c936ade66b0035ddc80dfacfd58acf02a0cfc920c48bcbc19933e9bb92"
   name = "github.com/gorilla/securecookie"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "e59506cc896acb7f7bf732d4fdf5e25f7ccd8983"
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:bfb5530b06be15a20de32e6c946eddc2d81693980c79205bcda3bd37fe1a931c"
+  digest = "1:ee5531f1e32c0082a6da68a605bc60284711d99b15d38dfba335a1ec52a58c20"
   name = "github.com/gorilla/sessions"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "ca9ada44574153444b00d3fd9c8559e4cc95f896"
   version = "v1.1"
 
 [[projects]]
-  digest = "1:64d212c703a2b94054be0ce470303286b177ad260b2f89a307e3d1bb6c073ef6"
+  digest = "1:dbbd067a1aa366a581fcf7587028715e69c0067880b4e82450456ddb0809277c"
   name = "github.com/gorilla/websocket"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
   version = "v1.2.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:88b08acd12881269e1d48265382fe6aad78d9d3e6145c8badea7dd1abe111de5"
+  digest = "1:00ff393d029fbc045ab3dab406de48e794582b05738c8e59425be272e095ccd0"
   name = "github.com/mailru/easyjson"
   packages = [
     ".",
@@ -75,71 +75,71 @@
     "jlexer",
     "jwriter",
   ]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
 
 [[projects]]
-  digest = "1:53f0ca8536bff15e4974b90def20012f61ef4fdb40b8b2712fa09c2820e53974"
+  digest = "1:2ff176f3a0cd3bce6950fa88eb75981cd31908b2f31502c95d83a095b91594d0"
   name = "github.com/nlopes/slack"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "c86337c0ef2486a15edd804355d9c73d2f2caed1"
   version = "v0.1.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:55c48c9cfdf8bab6f4911f621616fbe223c0b72a6df9aab6b172ab7e5cfc6bd2"
+  digest = "1:16bbae9910129be5a18b951eabacd54414d3faea094dfab92bb3c84884d46b11"
   name = "github.com/nu7hatch/gouuid"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
 
 [[projects]]
-  digest = "1:8e4f739f290a3d6f38b7b6d8f704be3fbff599f755e16745a1983f3e6e1b0b7e"
+  digest = "1:a1bca2b52c6b0601acfb89819d15ec0bbab3e0d29dd25282e49b9a0308eeab63"
   name = "github.com/op/go-logging"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "b2cb9fa56473e98db8caba80237377e83fe44db5"
   version = "v1"
 
 [[projects]]
-  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
+  digest = "1:5cf3f025cbee5951a4ee961de067c8a89fc95a5adabead774f82822efabab121"
   name = "github.com/pkg/errors"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:5fb6a3ee2d570d27813518d1986032d4d09c07e9660948d426c371aa445bae37"
+  digest = "1:1bed0c65e22787a84a239b310ac6723e7f03572acc8c1837b915436b1acd969a"
   name = "github.com/tappleby/slack_auth_proxy"
   packages = ["slack"]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "8628dfb9b447e59867ca96d52d5e1fc3bfea01d9"
 
 [[projects]]
   branch = "master"
-  digest = "1:6e0e3009ce4d1b88fc753ff93d5aa5cf3e09f59c8cd7bc5aeebb48fc7b07816b"
+  digest = "1:706dc3babb4f05fc2ea143dbd81b91573a57c1d9795c91b917d1293cf2a9253f"
   name = "golang.org/x/crypto"
   packages = [
     "acme",
     "acme/autocert",
   ]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "ae8bce0030810cf999bb2b9868ae5c7c58e6343b"
 
 [[projects]]
   branch = "master"
-  digest = "1:80ec738f420f13c23460cc92cd893d3e403588c60682afebbd4515eca5e19578"
+  digest = "1:5ece59b75274e04f53cf6f25c6c20500b66e341d9d62ecb3d348a54bbe4d558e"
   name = "golang.org/x/net"
   packages = ["websocket"]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "5f9ae10d9af5b1c89ae6904293b14b064d4ada23"
 
 [[projects]]
   branch = "v2"
-  digest = "1:c80894778314c7fb90d94a5ab925214900e1341afeddc953cda7398b8cdcd006"
+  digest = "1:28d0813bb6a1fe2c6cb29bc88158a470027ed336a8523d8807a0298fecac3d83"
   name = "gopkg.in/mgo.v2"
   packages = [
     ".",
@@ -148,35 +148,35 @@
     "internal/sasl",
     "internal/scram",
   ]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
 
 [[projects]]
-  digest = "1:4e90218c0a3d5d68827237a9308588b4751867515494faa381703b5a290dbf3d"
+  digest = "1:4db2076191e5b1802296a10f448741e28b4f2be8de5d6fc7a652eb4fa65c8ffe"
   name = "gopkg.in/olivere/elastic.v5"
   packages = [
     ".",
     "config",
     "uritemplates",
   ]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "2562d7254d4655c3bcf34810cdb4ca45e944d53f"
   version = "v5.0.68"
 
 [[projects]]
-  digest = "1:e85837cb04b78f61688c6eba93ea9d14f60d611e2aaf8319999b1a60d2dafbfa"
+  digest = "1:1beaa00290a7677eae3e3221b99208f94089aa893cc60dd5622f19c42d5eefb0"
   name = "gopkg.in/urfave/cli.v1"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
   version = "v1.20.0"
 
 [[projects]]
   branch = "v2"
-  digest = "1:cedccf16b71e86db87a24f8d4c70b0a855872eb967cb906a66b95de56aefbd0d"
+  digest = "1:18108594151654e9e696b27b181b953f9a90b16bf14d253dd1b397b025a1487f"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "NT"
   revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
 
 [solve-meta]
