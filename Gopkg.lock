@@ -18,6 +18,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:77ed1336eeb9abc9b6988cd13bfb7a3432dda3a9a31c2353b8e83035dc6d5db4"
+  name = "github.com/go-pg/migrations"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "8ff4b09aefed157041f3890b2b32e11657d1ba8b"
+  version = "v6.7.2"
+
+[[projects]]
   digest = "1:63e41f161b4c3cfdf7e5bedc9b611a1d24b78160e0635652ed68b9b3325971ee"
   name = "github.com/go-pg/pg"
   packages = [
@@ -169,6 +177,7 @@
   input-imports = [
     "github.com/dutchcoders/slackarchive-app",
     "github.com/elazarl/go-bindata-assetfs",
+    "github.com/go-pg/migrations",
     "github.com/go-pg/pg",
     "github.com/go-pg/pg/orm",
     "github.com/go-pg/pg/urlvalues",
