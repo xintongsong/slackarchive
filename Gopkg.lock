@@ -18,12 +18,23 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:1c9db302f5e172d283a37560842163450a1ebfd478581afa4f7bf00882c93a39"
-  name = "github.com/go-sql-driver/mysql"
-  packages = ["."]
+  digest = "1:63e41f161b4c3cfdf7e5bedc9b611a1d24b78160e0635652ed68b9b3325971ee"
+  name = "github.com/go-pg/pg"
+  packages = [
+    ".",
+    "internal",
+    "internal/iszero",
+    "internal/parser",
+    "internal/pool",
+    "internal/struct_filter",
+    "internal/tag",
+    "orm",
+    "types",
+    "urlvalues",
+  ]
   pruneopts = "NT"
-  revision = "a0583e0143b1624142adab07e0e97fe106d99561"
-  version = "v1.3"
+  revision = "750698e034bbc0f35e33e69df35cd8cc4c6b7d3d"
+  version = "v7.1.7"
 
 [[projects]]
   digest = "1:dbd86d229eacaa86a98b10f8fb3e3fc69a1913e0f4e010e7cc1f92bf12edca92"
@@ -67,24 +78,22 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:00ff393d029fbc045ab3dab406de48e794582b05738c8e59425be272e095ccd0"
-  name = "github.com/mailru/easyjson"
-  packages = [
-    ".",
-    "buffer",
-    "jlexer",
-    "jwriter",
-  ]
-  pruneopts = "NT"
-  revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
-
-[[projects]]
-  digest = "1:2ff176f3a0cd3bce6950fa88eb75981cd31908b2f31502c95d83a095b91594d0"
-  name = "github.com/nlopes/slack"
+  digest = "1:802f75230c29108e787d40679f9bf5da1a5673eaf5c10eb89afd993e18972909"
+  name = "github.com/jinzhu/inflection"
   packages = ["."]
   pruneopts = "NT"
-  revision = "c86337c0ef2486a15edd804355d9c73d2f2caed1"
-  version = "v0.1.0"
+  revision = "04140366298a54a039076d798123ffa108fff46c"
+
+[[projects]]
+  digest = "1:a27f31fde15b7737ef3f7fb1a16ce01033ba0bbae62cd045b1859cc33f2bbfda"
+  name = "github.com/nlopes/slack"
+  packages = [
+    ".",
+    "slackutilsx",
+  ]
+  pruneopts = "NT"
+  revision = "a7deeca7935c178aa865249bab511daf816288ba"
+  version = "v0.5.0"
 
 [[projects]]
   branch = "master"
@@ -125,43 +134,10 @@
   packages = [
     "acme",
     "acme/autocert",
+    "pbkdf2",
   ]
   pruneopts = "NT"
   revision = "ae8bce0030810cf999bb2b9868ae5c7c58e6343b"
-
-[[projects]]
-  branch = "master"
-  digest = "1:5ece59b75274e04f53cf6f25c6c20500b66e341d9d62ecb3d348a54bbe4d558e"
-  name = "golang.org/x/net"
-  packages = ["websocket"]
-  pruneopts = "NT"
-  revision = "5f9ae10d9af5b1c89ae6904293b14b064d4ada23"
-
-[[projects]]
-  branch = "v2"
-  digest = "1:28d0813bb6a1fe2c6cb29bc88158a470027ed336a8523d8807a0298fecac3d83"
-  name = "gopkg.in/mgo.v2"
-  packages = [
-    ".",
-    "bson",
-    "internal/json",
-    "internal/sasl",
-    "internal/scram",
-  ]
-  pruneopts = "NT"
-  revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
-
-[[projects]]
-  digest = "1:4db2076191e5b1802296a10f448741e28b4f2be8de5d6fc7a652eb4fa65c8ffe"
-  name = "gopkg.in/olivere/elastic.v5"
-  packages = [
-    ".",
-    "config",
-    "uritemplates",
-  ]
-  pruneopts = "NT"
-  revision = "2562d7254d4655c3bcf34810cdb4ca45e944d53f"
-  version = "v5.0.68"
 
 [[projects]]
   digest = "1:1beaa00290a7677eae3e3221b99208f94089aa893cc60dd5622f19c42d5eefb0"
@@ -179,24 +155,32 @@
   pruneopts = "NT"
   revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
 
+[[projects]]
+  digest = "1:7a568962d9a096530b96beae746a1bb0a77498dc4e14fedf9cc8946089635fe9"
+  name = "mellium.im/sasl"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "e58e780e1378aa4df5dc705364ff5ae9a4dd1e04"
+  version = "v0.2.1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/dutchcoders/slackarchive-app",
     "github.com/elazarl/go-bindata-assetfs",
-    "github.com/go-sql-driver/mysql",
+    "github.com/go-pg/pg",
+    "github.com/go-pg/pg/orm",
+    "github.com/go-pg/pg/urlvalues",
     "github.com/gorilla/mux",
     "github.com/gorilla/sessions",
     "github.com/gorilla/websocket",
     "github.com/nlopes/slack",
     "github.com/nu7hatch/gouuid",
     "github.com/op/go-logging",
+    "github.com/pkg/errors",
     "github.com/tappleby/slack_auth_proxy/slack",
     "golang.org/x/crypto/acme/autocert",
-    "gopkg.in/mgo.v2",
-    "gopkg.in/mgo.v2/bson",
-    "gopkg.in/olivere/elastic.v5",
     "gopkg.in/urfave/cli.v1",
     "gopkg.in/yaml.v2",
   ]

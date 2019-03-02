@@ -1,39 +1,78 @@
 package models
 
-import "github.com/nlopes/slack"
+import (
+	"net/url"
+
+	"github.com/nlopes/slack"
+
+	"github.com/go-pg/pg/orm"
+	"github.com/go-pg/pg/urlvalues"
+)
 
 type Channel struct {
-	ID        string `bson:"_id"`
-	Name      string `bson:"name"`
-	Team      string `bson:"team"`
-	IsChannel bool   `bson:"is_channel"`
+	ID        string
+	Name      string `sql:",notnull"`
+	Team      *Team
+	TeamID    string `sql:",notnull"`
+	IsChannel bool   `sql:",notnull"`
 	//Created    time.Time `bson:"created"`
-	Creator    string   `bson:"creator"`
-	IsArchived bool     `bson:"is_archived"`
-	IsGeneral  bool     `bson:"is_general"`
-	IsGroup    bool     `bson:"is_group"`
-	IsStarred  bool     `bson:"is_starred"`
-	Members    []string `bson:"members"`
-	Topic      Topic    `bson:"topic"`
-	Purpose    Purpose  `bson:"purpose"`
-	IsMember   bool     `bson:"is_member"`
-	LastRead   string   `bson:"last_read,omitempty"`
-	//Latest             Message        `bson:"latest,omitempty"`
-	UnreadCount        int `bson:"unread_count,omitempty"`
-	NumMembers         int `bson:"num_members,omitempty"`
-	UnreadCountDisplay int `bson:"unread_count_display,omitempty"`
+	CreatorID  string `pg:"fk:User"`
+	Creator    *User
+	IsArchived bool     `sql:",notnull"`
+	IsGeneral  bool     `sql:",notnull"`
+	IsGroup    bool     `sql:",notnull"`
+	Members    []string `sql:",array"`
+	Topic      Topic
+	Purpose    Purpose
+	IsMember   bool `sql:",notnull"`
+	LastRead   string
+	//Latest             Message
+	UnreadCount        int
+	NumMembers         int `sql:",notnull"`
+	UnreadCountDisplay int
 }
 
 // Purpose contains information about the topic
 type Purpose struct {
-	Value   string         `bson:"value"`
-	Creator string         `bson:"creator"`
-	LastSet slack.JSONTime `bson:"last_set"`
+	Value   string
+	Creator string
+	LastSet slack.JSONTime
 }
 
 // Topic contains information about the topic
 type Topic struct {
-	Value   string         `bson:"value"`
-	Creator string         `bson:"creator"`
-	LastSet slack.JSONTime `bson:"last_set"`
+	Value   string
+	Creator string
+	LastSet slack.JSONTime
+}
+
+type ChannelFilter struct {
+	TeamID string
+	urlvalues.Pager
+}
+
+// NewPager creates a go-pg Pager from net/url.Values using our custom field names
+func NewPager(form url.Values) urlvalues.Pager {
+	var pager urlvalues.Pager
+
+	var values urlvalues.Values = (urlvalues.Values)(form)
+
+	if val, err := values.Int("offset"); err == nil {
+		pager.Offset = val
+	}
+	if val, err := values.Int("size"); err == nil {
+		pager.Limit = val
+	}
+
+	return pager
+}
+
+func (f *ChannelFilter) Filter(q *orm.Query) (*orm.Query, error) {
+	if f.TeamID != "" {
+		q = q.Where("?TableAlias.team_id = ?", f.TeamID)
+	}
+
+	q = q.Apply(f.Pager.Pagination)
+
+	return q, nil
 }

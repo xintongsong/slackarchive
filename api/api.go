@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"crypto/tls"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,40 +12,35 @@ import (
 	"os/signal"
 	"path"
 	"regexp"
-	"strconv"
 	"sync"
 	"time"
 
 	"context"
 
+	errwrap "github.com/pkg/errors"
 	autocert "golang.org/x/crypto/acme/autocert"
-
-	mgo "gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 
 	config "github.com/dutchcoders/slackarchive/config"
 	models "github.com/dutchcoders/slackarchive/models"
 	utils "github.com/dutchcoders/slackarchive/utils"
+	"github.com/go-pg/pg"
+	"github.com/nlopes/slack"
 
 	handlers "github.com/dutchcoders/slackarchive/api/handlers"
 
-	elastic "gopkg.in/olivere/elastic.v5"
-
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	// "github.com/olivere/elastic"
 
-	logging "github.com/op/go-logging"
-	// "github.com/mattbaird/elastigo/lib"
 	"net"
 	"strings"
+
+	logging "github.com/op/go-logging"
 )
 
 var log = logging.MustGetLogger("slackarchive-api")
 
 type api struct {
-	session *mgo.Session
-	es      *elastic.Client
+	session *pg.DB
 	config  *config.Config
 	store   *sessions.CookieStore
 
@@ -65,17 +59,15 @@ type api struct {
 }
 
 func New(config *config.Config) *api {
-	session, err := mgo.Dial(config.Database.DSN)
+
+	log.Info("Starting")
+
+	opts, err := pg.ParseURL(config.Database.DSN)
 	if err != nil {
 		panic(err)
 	}
-
-	session.SetMode(mgo.Monotonic, true)
-
-	es, err := elastic.NewClient(elastic.SetURL(config.ElasticSearch.URL), elastic.SetSniff(true))
-	if err != nil {
-		panic(err)
-	}
+	db := pg.Connect(opts)
+	db.AddQueryHook(models.DBLogger{Logger: log})
 
 	var store = sessions.NewCookieStore(
 		[]byte(config.Cookies.AuthenticationKey),
@@ -83,87 +75,13 @@ func New(config *config.Config) *api {
 	)
 
 	return &api{
-		session:     session,
-		es:          es,
+		session:     db,
 		config:      config,
 		store:       store,
 		indexChan:   make(chan Message),
 		connections: map[*connection]bool{},
 		register:    make(chan *connection),
 		unregister:  make(chan *connection),
-	}
-}
-
-func (api *api) indexer() {
-
-	bulk := api.es.Bulk()
-
-	count := 0
-
-	start := time.Now()
-
-	flush := func() {
-		if response, err := bulk.Do(context.Background()); err != nil {
-			log.Error("Error indexing: ", err.Error())
-		} else {
-			indexed := response.Indexed()
-			count += len(indexed)
-
-			rate := float64(count) / time.Now().Sub(start).Minutes()
-			log.Infof("Bulk indexing: %d total %d (%f messages per minute).", len(indexed), rate, count)
-		}
-	}
-
-	api.wg.Add(1)
-
-	defer flush()
-	defer api.wg.Done()
-
-	// do we want to have buffered channels here? in case we cannot connect to mongo
-	for {
-		select {
-		case msg, ok := <-api.indexChan:
-			if !ok {
-				return
-			}
-
-			if msg.Category == "message" {
-				message := models.Message{}
-				if err := json.Unmarshal(msg.Body, &message); err != nil {
-					log.Errorf("Error unmarshaling message: %s\n%s", err.Error(), string(msg.Body))
-					continue
-				}
-
-				session := api.session.Copy()
-
-				db := Database(session)
-
-				if _, err := db.Messages.UpsertId(message.ID, &message); err != nil {
-					log.Error("Error upserting: %s", err.Error())
-				}
-
-				session.Close()
-
-				bulk = bulk.Add(elastic.NewBulkIndexRequest().
-					Index("slackarchive").
-					Type("message").
-					Id(message.ID).
-					Doc(message),
-				)
-
-				if bulk.NumberOfActions() < 100 {
-					continue
-				}
-			}
-
-		case <-time.After(time.Second * 10):
-		}
-
-		if bulk.NumberOfActions() == 0 {
-			continue
-		}
-
-		flush()
 	}
 }
 
@@ -198,31 +116,21 @@ func (api *api) teamHandler(ctx *Context) error {
 		Status string         `json:"status"`
 	}{}
 
-	//	domain := ctx.r.FormValue("domain")
-	// _ = Team(ctx.r)
-
-	qry := bson.M{
-		"is_disabled": bson.M{
-			"$not": bson.M{"$eq": true},
-		},
-	}
-
-	if r := ctx.r.Referer(); r == "" {
-	} else if _, err := Host(ctx.r); err != nil {
-	} else if t, err := api.Team(ctx); err == nil {
-		qry["_id"] = t.ID
+	var teams []models.Team
+	if t, err := api.Team(ctx); err == nil {
+		teams = append(teams, *t)
+		log.Debugf("api.Team added %+v", t)
 	} else {
+		qry := ctx.db.Model(&teams).Where("is_disabled = false")
+		err := qry.Select()
+
+		if err != nil {
+			// TODO: 400/500
+			fmt.Printf("Error: %s\n", err.Error())
+			return err
+		}
 	}
-
-	iter := ctx.db.Teams.Find(qry).Iter()
-	defer iter.Close()
-
-	if err := iter.Err(); err != nil {
-		fmt.Printf("Error: %s\n", err.Error())
-	}
-
-	team := models.Team{}
-	for iter.Next(&team) {
+	for _, team := range teams {
 		tr := TeamResponse{}
 		if err := utils.Merge(&tr, team); err != nil {
 			return err
@@ -271,10 +179,17 @@ type UserResponse struct {
 
 func (api *api) usersHandler(ctx *Context) error {
 	response := struct {
-		Users      []UserResponse `json:"users"`
-		TotalCount int64          `json:"total"`
+		Users      []slack.User `json:"users"`
+		TotalCount int64        `json:"total"`
 	}{}
 
+	panic("usersHandler not ported")
+
+	//ctx.w.Header().Set("Content-Type", "application/json")
+	return ctx.Write(response)
+}
+
+/*
 	var team *models.Team
 	if t, err := api.Team(ctx); err == nil {
 		team = t
@@ -312,9 +227,7 @@ func (api *api) usersHandler(ctx *Context) error {
 
 		response.Users = append(response.Users, usr)
 	}
-
-	return ctx.Write(response)
-}
+*/
 
 func (api *api) channelsHandler(ctx *Context) error {
 	type ChannelResponse struct {
@@ -335,51 +248,24 @@ func (api *api) channelsHandler(ctx *Context) error {
 
 	response := struct {
 		Channels   []ChannelResponse `json:"channels"`
-		TotalCount int64             `json:"total"`
+		TotalCount int               `json:"total"`
 	}{}
 
 	var team *models.Team
-	if t, err := api.Team(ctx); err == nil {
-		team = t
-	} else {
+	var err error
+	if team, err = api.Team(ctx); err != nil {
 		return err
 	}
 
-	team_id := team.ID
+	var channels []models.Channel
 
-	offset := int(0)
-	if val, err := strconv.Atoi(ctx.r.FormValue("offset")); err == nil {
-		offset = val
-	}
+	filter := &models.ChannelFilter{team.ID, models.NewPager(ctx.r.Form)}
+	count, err := ctx.db.Model(&channels).Apply(filter.Filter).SelectAndCount()
 
-	size := int(100)
-	if val, err := strconv.Atoi(ctx.r.FormValue("size")); err == nil {
-		size = val
-	}
-
-	qry := ctx.db.Channels.Find(
-		bson.M{
-			"$and": []bson.M{
-				bson.M{"team": team_id},
-				bson.M{"is_member": true},
-			},
-		})
-
-	if count, err := qry.Count(); err != nil {
-		fmt.Printf("Error: %#v\n", err.Error())
-	} else {
-		response.TotalCount = int64(count)
-	}
-
-	iter := qry.
-		Skip(offset).
-		Limit(size).
-		Iter()
-
-	channels := []models.Channel{}
-	if err := iter.All(&channels); err != nil {
+	if err != nil {
 		return err
 	}
+	response.TotalCount = count
 
 	for _, channel := range channels {
 		chnl := ChannelResponse{}
@@ -390,67 +276,8 @@ func (api *api) channelsHandler(ctx *Context) error {
 		response.Channels = append(response.Channels, chnl)
 	}
 
+	//ctx.w.Header().Set("Content-Type", "application/json")
 	return ctx.Write(response)
-}
-
-func All(items []interface{}, fn func(interface{}) error) error {
-	for _, item := range items {
-		err := fn(item)
-		if err == nil {
-			continue
-		}
-
-		return err
-	}
-
-	return nil
-}
-
-// AttachmentField contains information for an attachment field
-// An Attachment can contain multiple of these
-type AttachmentField struct {
-	Title string `json:"title"`
-	Value string `json:"value"`
-	Short bool   `json:"short"`
-}
-
-// Attachment contains all the information for an attachment
-type Attachment struct {
-	Color    string `json:"color,omitempty"`
-	Fallback string `json:"fallback"`
-
-	AuthorName    string `json:"author_name,omitempty"`
-	AuthorSubname string `json:"author_subname,omitempty"`
-	AuthorLink    string `json:"author_link,omitempty"`
-	AuthorIcon    string `json:"author_icon,omitempty"`
-
-	Title     string `json:"title,omitempty"`
-	TitleLink string `json:"title_link,omitempty"`
-	Pretext   string `json:"pretext,omitempty"`
-	Text      string `json:"text"`
-
-	ImageURL string `json:"image_url,omitempty"`
-	ThumbURL string `json:"thumb_url,omitempty"`
-
-	Fields     []AttachmentField `json:"fields,omitempty"`
-	MarkdownIn []string          `json:"mrkdwn_in,omitempty"`
-}
-
-func DebugQuery(q elastic.Query) error {
-	ss := elastic.NewSearchSource().Query(q)
-
-	src, err := ss.Source()
-	if err != nil {
-		return err
-	}
-
-	out, err := json.MarshalIndent(src, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	log.Info("%s", string(out))
-	return err
 }
 
 func Host(r *http.Request) (string, error) {
@@ -489,21 +316,18 @@ func (api *api) Team(ctx *Context) (*models.Team, error) {
 		return nil, err
 	}
 
-	qry := bson.M{
-		"custom_domain": host,
+	team := &models.Team{
+		IsDisabled: false,
+		Domain:     host,
 	}
 
-	team := models.Team{}
-	if err := ctx.db.Teams.Find(qry).One(&team); err == nil {
-		return &team, nil
-	} else if err := ctx.db.Teams.Find(
-		bson.M{
-			"is_disabled": bson.M{
-				"$not": bson.M{"$eq": true},
-			},
-			"domain": api.config.Team,
-		}).One(&team); err == nil {
-		return &team, nil
+	if err := ctx.db.Model(team).WhereStruct(team).Select(); err == nil {
+		return team, nil
+	}
+
+	team.Domain = api.config.Team
+	if err := ctx.db.Model(team).WhereStruct(team).Select(); err == nil {
+		return team, nil
 	} else {
 		log.Errorf("Error: %#v\n", err.Error())
 		return nil, fmt.Errorf("Team is disabled or does not exist")
@@ -511,425 +335,188 @@ func (api *api) Team(ctx *Context) (*models.Team, error) {
 }
 
 func (api *api) messagesHandler(ctx *Context) error {
-	type MessageResponse struct {
-		Text            string `json:"text"`
-		Channel         string `json:"channel"`
-		User            string `json:"user"`
-		Type            string `json:"type"`
-		Timestamp       string `json:"ts"`
-		ThreadTimestamp string `json:"thread_ts,omitempty"`
-
-		IsStarred   bool         `json:"is_starred,omitempty"`
-		PinnedTo    []string     `json:"pinned_to,omitempty"`
-		Attachments []Attachment `json:"attachments,omitempty"`
-		// Edited      *Edited      `json:"edited,omitempty"`
-
-		// Message Subtypes
-		SubType string `json:"subtype,omitempty"`
-
-		// Hidden Subtypes
-		Hidden           bool   `json:"hidden,omitempty"`     // message_changed, message_deleted, unpinned_item
-		DeletedTimestamp string `json:"deleted_ts,omitempty"` // message_deleted
-		EventTimestamp   string `json:"event_ts,omitempty"`
-
-		// bot_message (https://api.slack.com/events/message/bot_message)
-		BotID    string `json:"bot_id,omitempty"`
-		Username string `json:"username,omitempty"`
-
-		Icons struct {
-			IconURL   string `json:"icon_url,omitempty"`
-			IconEmoji string `json:"icon_emoji,omitempty"`
-		} `json:"icons,omitempty"`
-
-		// channel_join, group_join
-		Inviter string `json:"inviter,omitempty"`
-
-		// channel_topic, group_topic
-		Topic string `json:"topic,omitempty"`
-
-		// channel_purpose, group_purpose
-		Purpose string `json:"purpose,omitempty"`
-
-		// channel_name, group_name
-		Name    string `json:"name,omitempty"`
-		OldName string `json:"old_name,omitempty"`
-
-		// channel_archive, group_archive
-		Members []string `json:"members,omitempty"`
-
-		// file_share, file_comment, file_mention
-		// File *File `json:"file,omitempty"`
-
-		// file_share
-		Upload bool `json:"upload,omitempty"`
-
-		// file_comment
-		// Comment *Comment `json:"comment,omitempty"`
-
-		// pinned_item
-		ItemType string `json:"item_type,omitempty"`
-
-		// https://api.slack.com/rtm
-		ReplyTo int    `json:"reply_to,omitempty"`
-		Team    string `json:"team,omitempty"`
-	}
 
 	response := struct {
-		Messages   []MessageResponse `json:"messages"`
-		TotalCount int64             `json:"total"`
+		Messages   []slack.Message `json:"messages"`
+		TotalCount int             `json:"total"`
 		Aggs       struct {
 			Buckets map[string]int64 `json:"buckets"`
 		} `json:"aggs"`
 		Related struct {
-			Users map[string]UserResponse `json:"users"`
+			Users map[string]models.User `json:"users"`
 		} `json:"related"`
 	}{
-		Messages: []MessageResponse{},
+		Messages: []slack.Message{},
 		Aggs: struct {
 			Buckets map[string]int64 `json:"buckets"`
 		}{
 			Buckets: map[string]int64{},
 		},
 		Related: struct {
-			Users map[string]UserResponse `json:"users"`
+			Users map[string]models.User `json:"users"`
 		}{
-			Users: map[string]UserResponse{},
+			Users: map[string]models.User{},
 		},
 	}
 
-	_ = response
-
 	var team *models.Team
-	if t, err := api.Team(ctx); err == nil {
-		team = t
-	} else {
+	var err error
+	if team, err = api.Team(ctx); err != nil {
 		return err
 	}
+	_ = team
 
-	qs := elastic.NewBoolQuery()
+	var messages []models.Message
+	qry := api.session.Model(&messages)
 
-	qs = qs.Must(elastic.NewMatchAllQuery())
-	if val := ctx.r.FormValue("q"); val != "" {
-		qs = qs.Must(elastic.NewQueryStringQuery(val).DefaultOperator("AND"))
+	var searchQuery string
+	if searchQuery = ctx.r.FormValue("q"); searchQuery != "" {
+		qry.Where(`?TableAlias.tsv @@ websearch_to_tsquery(?)`, searchQuery)
 	}
 
-	var pf = elastic.NewBoolQuery()
-
-	var fq = elastic.NewBoolQuery()
-
-	fq = fq.Must(elastic.NewTermsQuery("team.raw", team.ID))
-
-	channels := []models.Channel{}
+	qry.Column("Channel._").Where("Channel.team_id = ?", team.ID)
 
 	// check if bot have been removed from the channel
 	if channel := ctx.r.FormValue("channel"); channel != "" {
-		//pf = pf.Must(elastic.NewTermQuery("Channel.raw", channel))
-		if err := ctx.db.Channels.Find(
-			bson.M{
-				"$and": []bson.M{
-					bson.M{"_id": channel},
-					bson.M{"team": team.ID},
-					bson.M{"is_member": true},
-				},
-			}).All(&channels); err != nil {
-			return err
-		}
+		// TODO: Check our Archive bot is still a member of this channel
+		qry.WhereStruct(&models.Message{
+			ChannelID: channel,
+		})
+
 	} else {
-		// only channels where the bot is still archiving
-		if err := ctx.db.Channels.Find(
-			bson.M{
-				"$and": []bson.M{
-					bson.M{"team": team.ID},
-					bson.M{"is_member": true},
-				},
-			}).All(&channels); err != nil {
-			return err
-		}
+		// TODO: Only the channels where our Archive bot is still a member of this channel
+		//panic("Not implemented - no channel")
 	}
 
-	channelsStr := []interface{}{}
-	for _, channel := range channels {
-		channelsStr = append(channelsStr, channel.ID)
+	if ctx.r.FormValue("qfrom") != "" || ctx.r.FormValue("qto") != "" {
+		panic("Not implemented - qfrom/qto")
 	}
 
-	pf = pf.Must(elastic.NewTermsQuery("channel.raw", channelsStr...))
-
-	if val := ctx.r.FormValue("qfrom"); val == "" {
-	} else if qfrom, err := strconv.ParseFloat(ctx.r.FormValue("qfrom"), 64); err != nil {
-	} else if val := ctx.r.FormValue("qto"); val == "" {
-	} else if qto, err := strconv.ParseFloat(ctx.r.FormValue("qto"), 64); err != nil {
-	} else {
-		log.Info("Using qfrom and qto")
-		qs = qs.Must(elastic.NewRangeQuery("ts.float").Gte(qfrom).Lt(qto))
+	if val := ctx.r.FormValue("thread"); val != "" {
+		panic("Not implemented - thread")
 	}
 
-	// TODO: check if channel is public
-	/*
-		if count, err := ctx.db.Teams.Find(bson.M{
-			"is_disabled": bson.M{
-				"$not": bson.M{"$eq": true},
-			},
-			"_id": team_id,
-		}).Count(); err != nil {
-			fmt.Printf("Error: %#v\n", err.Error())
-			return err
-		} else if count == 0 {
-			return fmt.Errorf("Team is disabled or does not exist")
-		}
-	*/
-
-	if val := ctx.r.FormValue("thread"); val == "" {
-	} else if val, err := strconv.ParseFloat(val, 64); err != nil {
-	} else {
-		fq = fq.Must(elastic.NewTermQuery("thread_ts.float", val))
+	var from, to *time.Time
+	if from, err = models.TimestampToTime(ctx.r.FormValue("from")); err != nil {
+		return errwrap.Wrap(err, "Invalid from value")
 	}
 
-	from := float64(0)
-	if val, err := strconv.ParseFloat(ctx.r.FormValue("from"), 64); err == nil {
-		from = val
+	if to, err = models.TimestampToTime(ctx.r.FormValue("to")); err != nil {
+		return errwrap.Wrap(err, "Invalid to value")
 	}
 
-	to := float64(time.Now().Unix())
-	if val, err := strconv.ParseFloat(ctx.r.FormValue("to"), 64); err == nil {
-		to = val
+	if from != nil && to != nil {
+		qry.Where("?TableAlias.timestamp BETWEEN ? AND ?", from, to)
+	} else if from != nil {
+		qry.Where("?TableAlias.timestamp >= ?", from)
+	} else if to != nil {
+		qry.Where("?TableAlias.timestamp <= ?", to)
 	}
 
-	sortOrder := false
-	if val := ctx.r.FormValue("sort"); val == "asc" {
-		sortOrder = true
-	}
-
-	fq = fq.MustNot(elastic.NewTermQuery("sub_type.raw", "message_changed"))
-	fq = fq.MustNot(elastic.NewTermQuery("sub_type.raw", "message_deleted"))
-	fq = fq.MustNot(elastic.NewTermQuery("sub_type.raw", "channel_join"))
-	fq = fq.MustNot(elastic.NewTermQuery("sub_type.raw", "channel_leave"))
-	fq = fq.MustNot(elastic.NewTermQuery("sub_type.raw", "pinned_item"))
-	fq = fq.MustNot(elastic.NewTermQuery("hidden", true))
-	fq = fq.Must(elastic.NewRangeQuery("ts.float").Gte(from).Lt(to))
-
-	qs = qs.Filter(fq)
-
-	offset := int(0)
-	if val, err := strconv.Atoi(ctx.r.FormValue("offset")); err == nil {
-		offset = val
-	}
-
-	size := int(100)
-	if val, err := strconv.Atoi(ctx.r.FormValue("size")); err != nil {
-	} else if size < 500 {
-		size = val
-	}
-
-	hl := elastic.
-		NewHighlight().
-		PreTags("[hl]").
-		PostTags("[/hl]").
-		RequireFieldMatch(false).
-		NumOfFragments(0).
-		Fields(
-			elastic.NewHighlighterField("text"),
-			elastic.NewHighlighterField("attachments.text"),
-		)
-
-	ss := api.es.Search().
-		Index("slackarchive").
-		Type("message").
-		Query(qs).
-		PostFilter(pf).
-		Highlight(hl)
+	qry.Where(`NOT ?TableAlias."msg" @> '{"hidden": true}'`)
+	qry.Where(`?TableAlias."msg"->>'subtype' IS NULL OR ?TableAlias."msg"->>'subtype' NOT IN ('message_changed', 'message_deleted', 'channel_join', 'channel_leave', 'pinned_item')`)
 
 	if val := ctx.r.FormValue("aggs"); val == "1" {
-		channelAgg := elastic.NewTermsAggregation().Field("Channel.raw").Size(100).OrderByCountDesc()
-		ss = ss.Aggregation("channel", channelAgg)
+
+		var res []struct {
+			ChannelID string
+			Matches   int64
+		}
+		agg := qry.Copy()
+		if err := agg.Group("channel_id").Column("channel_id").ColumnExpr("count(*) as matches").Select(&res); err != nil {
+			return errwrap.Wrap(err, "Error performing aggregate search")
+		}
+		for _, c := range res {
+			response.Aggs.Buckets[c.ChannelID] = c.Matches
+		}
 	}
 
-	ss = ss.Sort("ts.float", sortOrder).
-		From(offset).
-		Size(size)
-
-	func() {
-		src, err := qs.Source()
-		if err != nil {
-			log.Error(err.Error())
-			return
-		}
-
-		data, err := json.Marshal(src)
-		if err != nil {
-			log.Error(err.Error())
-			return
-		}
-
-		s := string(data)
-		log.Debug(s)
-	}()
-
-	searchResult, err := ss.Do(context.Background())
-	if err == nil {
-	} else if ee, ok := err.(*elastic.Error); ok {
-		json.NewEncoder(os.Stdout).Encode(ee)
-
-		log.Error("Error search: %s %s", ee.Details.Type, ee.Details.Reason)
-		log.Error("Error search: %s", ee.Error())
-		return ee
+	if val := ctx.r.FormValue("sort"); val == "asc" {
+		qry.Order("timestamp ASC")
 	} else {
-		return err
+		qry.Order("timestamp DESC")
 	}
 
-	response.TotalCount = searchResult.Hits.TotalHits
-
-	if aggs, ok := searchResult.Aggregations.Terms("channel"); ok {
-		for _, bucket := range aggs.Buckets {
-			response.Aggs.Buckets[bucket.Key.(string)] = bucket.DocCount
-		}
+	if searchQuery != "" {
+		qry.ColumnExpr(
+			`jsonb_set(?TableAlias.msg, '{text}', ts_headline(?TableAlias.msg->'text', websearch_to_tsquery(?), 'StartSel=[hl] StopSel=[/hl] HighlightAll=true')) AS msg`,
+			searchQuery,
+		)
 	}
 
-	for _, hit := range searchResult.Hits.Hits {
-		var message models.Message
-		if err := json.Unmarshal(*hit.Source, &message); err != nil {
-			continue
-		}
+	pager := models.NewPager(ctx.r.Form)
 
-		msg := MessageResponse{}
-		if err := utils.Merge(&msg, message); err != nil {
-			log.Error(err.Error())
-		}
+	pager.MaxLimit = 500
+	qry = qry.Apply(pager.Pagination)
 
-		// update highlight output
-		if hit.Highlight != nil {
-			if hl, ok := hit.Highlight["text"]; ok {
-				msg.Text = hl[0]
-			}
+	qry = qry.Relation("User")
 
-			if hl, ok := hit.Highlight["attachments.text"]; ok {
-				for i, _ := range hl {
-					msg.Attachments[i].Text = hl[i]
-				}
-			}
-		}
-
-		response.Messages = append(response.Messages, msg)
+	if response.TotalCount, err = qry.SelectAndCount(); err != nil {
+		return errwrap.Wrap(err, "Error selecting messages")
 	}
 
 	r := regexp.MustCompile(`\<\@(.+?)\>`)
+	response.Messages = make([]slack.Message, 0, len(messages))
 
-	userids := []string{}
-	for _, message := range response.Messages {
+	// UserIDs to find
+	userids := make(map[string]struct{})
+
+	for _, message := range messages {
+		response.Messages = append(response.Messages, *message.Msg)
+
+		response.Related.Users[message.User.ID] = *message.User
+		// If another message asked for this user, we've got it
+		delete(userids, message.User.ID)
+
 		// extract matches from message text
 		func() {
 			var matches [][]string
-			if matches = r.FindAllStringSubmatch(message.Text, -1); matches == nil {
+			if matches = r.FindAllStringSubmatch(message.Msg.Text, -1); matches == nil {
 				return
 			}
 
 			for _, match := range matches {
-				userids = append(userids, match[1])
+				if _, ok := response.Related.Users[match[1]]; ok {
+					// Already loaded from prefetch
+					continue
+				}
+				userids[match[1]] = struct{}{}
 			}
 		}()
 
-		if message.User == "" {
-			continue
+		if message.Msg.ParentUserId != "" {
+			if _, ok := response.Related.Users[message.Msg.ParentUserId]; ok == false {
+				userids[message.Msg.ParentUserId] = struct{}{}
+			}
 		}
-
-		userids = append(userids, message.User)
 	}
 
-	iter := ctx.db.Users.Find(
-		bson.M{
-			"_id": bson.M{
-				"$in": userids,
-			},
-		}).Iter()
-
-	defer iter.Close()
-
 	users := []models.User{}
-	if err := iter.All(&users); err != nil {
-		return err
+
+	if len(userids) == 0 {
+		log.Debug("No non-prefetched users to query")
+	} else {
+		ids := make([]string, len(userids))
+		i := 0
+		for u := range userids {
+			ids[i] = u
+			i++
+		}
+		if err := api.session.Model((*models.User)(nil)).Where("id IN (?)", pg.In(ids)).Select(&users); err != nil {
+			return errwrap.Wrap(err, "Error selectiing related users for message")
+		}
 	}
 
 	for _, user := range users {
-		usr := UserResponse{}
-		if err := utils.Merge(&usr, user); err != nil {
-			log.Error(err.Error())
-		}
-
-		response.Related.Users[user.ID] = usr
+		response.Related.Users[user.ID] = user
 	}
 
+	//ctx.w.Header().Set("Content-Type", "application/json")
 	return ctx.Write(response)
 }
 
 func (api *api) health(ctx *Context) error {
 	ctx.Write("Approaching Neutral Zone, all systems normal and functioning.")
-	return nil
-}
-
-func (api *api) updateIds(ctx *Context) error {
-	iter := ctx.db.Messages.Find(nil).Iter()
-
-	defer iter.Close()
-
-	message := models.Message{}
-	for iter.Next(&message) {
-		newID := fmt.Sprintf("%s-%s-%s", message.Team, message.Channel, message.Timestamp)
-		if newID == message.ID {
-			continue
-		}
-
-		if err := ctx.db.Messages.RemoveId(message.ID); err != nil {
-			log.Errorf("Error during deleting: %s", err.Error())
-		}
-
-		message.ID = newID
-
-		if _, err := ctx.db.Messages.UpsertId(message.ID, &message); err != nil {
-			log.Errorf("Error during upserting: %s", err.Error())
-		}
-
-		log.Info(newID, message.ID)
-	}
-
-	return nil
-}
-
-func (api *api) reIndex(ctx *Context) error {
-	iter := ctx.db.Messages.Find(nil).Batch(1000).Iter()
-
-	defer iter.Close()
-
-	bulk := api.es.Bulk()
-
-	count := 0
-
-	message := models.Message{}
-	for iter.Next(&message) {
-		if message.IsDeleted {
-			continue
-		}
-
-		bulk = bulk.Add(elastic.NewBulkIndexRequest().
-			Index("slackarchive").
-			Type("message").
-			Id(message.ID).
-			Doc(message),
-		)
-
-		if bulk.NumberOfActions() < 1000 {
-			continue
-		}
-
-		response, err := bulk.Do(context.Background())
-		if err != nil {
-			log.Error(err.Error())
-		} else {
-			indexed := response.Indexed()
-			count += len(indexed)
-
-			log.Info("Bulk indexing: %d total %d.", len(indexed), count)
-		}
-	}
-
 	return nil
 }
 
@@ -973,9 +560,6 @@ func (api *api) Serve() {
 
 	r.HandleFunc("/health.html", api.ContextHandlerFunc(api.health)).Methods("GET")
 
-	// r.HandleFunc("/updateids", api.ContextHandlerFunc(api.updateIds)).Methods("GET")
-	// r.HandleFunc("/reindex", api.ContextHandlerFunc(api.reIndex)).Methods("GET")
-
 	sr := r.PathPrefix("/v1").Subrouter()
 
 	sr.HandleFunc("/messages", api.ContextHandlerFunc(api.messagesHandler)).Methods("GET")
@@ -991,7 +575,7 @@ func (api *api) Serve() {
 
 	// run websocket server
 	go api.run()
-	go api.indexer()
+	//go api.indexer()
 
 	r.HandleFunc("/ws", api.serveWs)
 

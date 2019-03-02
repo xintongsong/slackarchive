@@ -1,37 +1,61 @@
 package models
 
+import (
+	"context"
+
+	"github.com/go-pg/pg"
+	"github.com/nlopes/slack"
+)
+
 // UserProfile contains all the information details of a given user
 type UserProfile struct {
-	FirstName          string `bson:"first_name"`
-	LastName           string `bson:"last_name"`
-	RealName           string `bson:"real_name"`
-	RealNameNormalized string `bson:"real_name_normalized"`
-	Email              string `bson:"email"`
-	Skype              string `bson:"skype"`
-	Phone              string `bson:"phone"`
-	Image24            string `bson:"image_24"`
-	Image32            string `bson:"image_32"`
-	Image48            string `bson:"image_48"`
-	Image72            string `bson:"image_72"`
-	Image192           string `bson:"image_192"`
-	ImageOriginal      string `bson:"image_original"`
-	Title              string `bson:"title"`
+	FirstName          string `json:"first_name,omitempty"`
+	LastName           string `json:"last_name,omitempty"`
+	RealName           string `json:"real_name,omitempty"`
+	RealNameNormalized string `json:"real_name_normalized,omitempty"`
+	Email              string `json:"email,omitempty"`
+	Skype              string `json:"skype,omitempty"`
+	Phone              string `json:"phone,omitempty"`
+	Image24            string `json:"image_24,omitempty"`
+	Image32            string `json:"image_32,omitempty"`
+	Image48            string `json:"image_48,omitempty"`
+	Image72            string `json:"image_72,omitempty"`
+	Image192           string `json:"image_192,omitempty"`
+	ImageOriginal      string `json:"image_original,omitempty"`
+	Title              string `json:"title,omitempty"`
 }
 
 // User contains all the information of a user
 type User struct {
-	ID                string      `bson:"_id"`
-	Name              string      `bson:"name"`
-	Team              string      `bson:"team"`
-	Deleted           bool        `bson:"deleted"`
-	Color             string      `bson:"color"`
-	Profile           UserProfile `bson:"profile"`
-	IsBot             bool        `bson:"is_bot"`
-	IsAdmin           bool        `bson:"is_admin"`
-	IsOwner           bool        `bson:"is_owner"`
-	IsPrimaryOwner    bool        `bson:"is_primary_owner"`
-	IsRestricted      bool        `bson:"is_restricted"`
-	IsUltraRestricted bool        `bson:"is_ultra_restricted"`
-	HasFiles          bool        `bson:"has_files"`
-	Presence          string      `bson:"presence"`
+	ID                string      `json:"id" sql:",notnull"`
+	Name              string      `json:"name" sql:",notnull"`
+	Team              *Team       `json:"-"`
+	TeamID            string      `json:"team,omitempty" sql:",notnull"`
+	Deleted           bool        `json:"deleted" sql:",notnull"`
+	Color             string      `json:"color,omitempty"`
+	Profile           UserProfile `json:"profile"`
+	IsBot             bool        `json:"is_bot,omitempty"`
+	IsAdmin           bool        `json:"is_admin,omitempty"`
+	IsOwner           bool        `json:"is_owner,omitempty"`
+	IsPrimaryOwner    bool        `json:"is_primary_owner,omitempty"`
+	IsRestricted      bool        `json:"is_restricted,omitempty"`
+	IsUltraRestricted bool        `json:"is_ultra_restricted,omitempty"`
+	HasFiles          bool        `json:"has_files,omitempty"`
+	Presence          string      `json:"presence,omitempty"`
+}
+
+func (u *User) AfterSelect(_ context.Context, _ pg.DB) error {
+	if u.Team != nil {
+		u.TeamID = u.Team.ID
+	}
+	return nil
+}
+
+func (u *User) MergeBot(bot *slack.Bot) {
+	u.Name = bot.Name
+	u.Deleted = bot.Deleted
+	// No, this isn't a typo. The sizes don't match, but this is close
+	u.Profile.Image32 = bot.Icons.Image36
+	u.Profile.Image48 = bot.Icons.Image48
+	u.Profile.Image72 = bot.Icons.Image72
 }

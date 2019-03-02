@@ -9,10 +9,11 @@ import (
 )
 
 func main() {
-	api := slack.New("YOUR TOKEN HERE")
-	logger := log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)
-	slack.SetLogger(logger)
-	api.SetDebug(true)
+	api := slack.New(
+		"YOUR TOKEN HERE",
+		slack.OptionDebug(true),
+		slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)),
+	)
 
 	rtm := api.NewRTM()
 	go rtm.ManageConnection()
@@ -26,8 +27,8 @@ func main() {
 		case *slack.ConnectedEvent:
 			fmt.Println("Infos:", ev.Info)
 			fmt.Println("Connection counter:", ev.ConnectionCount)
-			// Replace #general with your Channel ID
-			rtm.SendMessage(rtm.NewOutgoingMessage("Hello world", "#general"))
+			// Replace C2147483705 with your Channel ID
+			rtm.SendMessage(rtm.NewOutgoingMessage("Hello world", "C2147483705"))
 
 		case *slack.MessageEvent:
 			fmt.Printf("Message: %v\n", ev)

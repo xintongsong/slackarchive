@@ -34,10 +34,6 @@ type Config struct {
 
 	Data string `yaml:"data"`
 
-	ElasticSearch struct {
-		URL string `yaml:"url"`
-	} `yaml:"elasticsearch"`
-
 	SessionName string `yaml:"session_name"`
 }
 

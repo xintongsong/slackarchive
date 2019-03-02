@@ -56,11 +56,23 @@ func merge(dest reflect.Value, src reflect.Value) error {
 		for i := 0; i < src.NumField(); i++ {
 			tField := src.Type().Field(i)
 
-			df := dest.FieldByName(tField.Name)
+			// Look for *ID (UserID, TeamID) instead
+			df := dest.FieldByName(tField.Name + "ID")
 			if df.Kind() == 0 {
+				df = dest.FieldByName(tField.Name)
+			}
+			// Still not found?
+			if df.Kind() == 0 {
+
+				if tField.Anonymous {
+					// Try to merge the anon struct in to our field directly. This deals
+					// with cases like `type struct Message { slack.Message }`
+					if err := merge(dest, src.Field(i)); err != nil {
+						return err
+					}
+				}
 				continue
 			}
-
 			if err := merge(df, src.Field(i)); err != nil {
 				return err
 			}

@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/dutchcoders/slackarchive/api/errors"
+	"github.com/go-pg/pg/orm"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions" // /tree/ptrs
 )
@@ -18,7 +18,7 @@ func init() {
 type AfterFunc func()
 
 type Context struct {
-	db *database
+	db orm.DB
 
 	w           http.ResponseWriter
 	r           *http.Request
@@ -32,11 +32,8 @@ type ContextFunc func(*Context) error
 
 func (api *api) ContextHandlerFunc(h ContextFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session := api.session.Copy()
-		defer session.Close()
-
 		ctx := Context{
-			db: Database(session),
+			db: api.session,
 
 			r: r,
 			w: w,
@@ -60,17 +57,6 @@ func (api *api) ContextHandlerFunc(h ContextFunc) http.HandlerFunc {
 			log.Error(err.Error())
 
 			switch err.(type) {
-			case *mysql.MySQLError:
-				// or should we do this in the api call itself, instead of generic errors?
-				driverErr := err.(*mysql.MySQLError)
-				switch driverErr.Number {
-				case 1062:
-					w.WriteHeader(ErrDatabaseAlreadyExists.Code())
-					json.NewEncoder(w).Encode(ErrDatabaseAlreadyExists)
-				default:
-					w.WriteHeader(ErrDatabaseOther.Code())
-					json.NewEncoder(w).Encode(ErrDatabaseOther)
-				}
 			case errors.APIError:
 				w.WriteHeader(err.(errors.APIError).Code())
 				json.NewEncoder(w).Encode(err)
@@ -123,8 +109,8 @@ func (ctx *Context) Read(o interface{}) error {
 }
 
 func (ctx *Context) Write(o interface{}) error {
-	ctx.w.WriteHeader(http.StatusOK)
 	ctx.w.Header().Add("Content-Type", "application/json")
+	ctx.w.WriteHeader(http.StatusOK)
 	ctx.bodyWritten = true
 	err := json.NewEncoder(ctx.w).Encode(o)
 	return err

@@ -8,17 +8,19 @@ import (
 
 	cli "gopkg.in/urfave/cli.v1"
 
-	_ "github.com/go-sql-driver/mysql"
-
-	slackarchiveapi "github.com/dutchcoders/slackarchive/api"
-	config "github.com/dutchcoders/slackarchive/config"
+	"github.com/dutchcoders/slackarchive/api"
+	"github.com/dutchcoders/slackarchive/config"
+	"github.com/go-pg/pg"
+	"github.com/op/go-logging"
 )
+
+var log = logging.MustGetLogger("main")
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
-var version string = "0.1"
+var version = "0.1"
 
 func main() {
 	app := cli.NewApp()
@@ -32,8 +34,13 @@ func main() {
 			EnvVar: "",
 		},
 	}...)
-
-	app.Action = run
+	app.Commands = []cli.Command{
+		{
+			Name:        "run",
+			Action:      run,
+			Description: "Run webserver",
+		},
+	}
 
 	app.Run(os.Args)
 }
@@ -41,6 +48,6 @@ func main() {
 func run(c *cli.Context) {
 	conf := config.MustLoad(c.GlobalString("config"))
 
-	api := slackarchiveapi.New(conf)
+	api := api.New(conf)
 	api.Serve()
 }
