@@ -10,6 +10,7 @@ import (
 
 	"github.com/dutchcoders/slackarchive/api"
 	"github.com/dutchcoders/slackarchive/config"
+	"github.com/dutchcoders/slackarchive/importer"
 	"github.com/go-pg/pg"
 	"github.com/op/go-logging"
 )
@@ -34,11 +35,25 @@ func main() {
 			EnvVar: "",
 		},
 	}...)
+	app.HelpName = "slack-archive"
 	app.Commands = []cli.Command{
 		{
 			Name:        "run",
 			Action:      run,
 			Description: "Run webserver",
+		},
+		{
+			Name:   "import",
+			Action: doImport,
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: "debug, D",
+				},
+			},
+			ArgsUsage: "xoxb-bot-token /path/to/data",
+			UsageText: "Provided data folder should have contain a folder matching\n" +
+				"   the domain for the token. For example a myteam.slack.com data/ should\n" +
+				"   contain myteam/",
 		},
 	}
 
@@ -50,4 +65,14 @@ func run(c *cli.Context) {
 
 	api := api.New(conf)
 	api.Serve()
+}
+
+func doImport(c *cli.Context) {
+	if c.NArg() != 2 {
+		cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
+
+	}
+	conf := config.MustLoad(c.GlobalString("config"))
+	i := importer.New(conf, c.Bool("debug"))
+	i.Import(c.Args().Get(0), c.Args().Get(1))
 }
