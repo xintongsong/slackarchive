@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"os"
 
-	assets "github.com/dutchcoders/slackarchive-app"
+	assets "github.com/ashb/slackarchive/frontend"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 )
 

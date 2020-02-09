@@ -3,7 +3,6 @@ module github.com/ashb/slackarchive
 go 1.13
 
 require (
-	github.com/dutchcoders/slackarchive-app v0.0.0-20180506145144-c7420b6a994e
 	github.com/elazarl/go-bindata-assetfs v1.0.0
 	github.com/go-pg/migrations v6.7.2+incompatible
 	github.com/go-pg/pg v7.1.7+incompatible
