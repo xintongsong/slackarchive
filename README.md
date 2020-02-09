@@ -1,4 +1,4 @@
-# SlackArchive [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dutchcoders/slackarchive?utm_source=badge&utm_medium=badge&utm_campaign=&utm_campaign=pr-badge&utm_content=badge) [![Go Report Card](https://goreportcard.com/badge/dutchcoders/slackarchive)](https://goreportcard.com/report/dutchcoders/slackarchive) [![Build Status](https://travis-ci.org/dutchcoders/slackarchive.svg?branch=master)](https://travis-ci.org/dutchcoders/slackarchive) [![codecov](https://codecov.io/gh/dutchcoders/slackarchive/branch/master/graph/badge.svg)](https://codecov.io/gh/dutchcoders/slackarchive) [![Docker pulls](https://img.shields.io/docker/pulls/dutchcoders/slackarchive.svg)](https://hub.docker.com/r/dutchcoders/slackarchive/)
+# SlackArchive [![Go Report Card](https://goreportcard.com/badge/ashb/slackarchive)](https://goreportcard.com/report/ashb/slackarchive) [![codecov](https://codecov.io/gh/ashb/slackarchive/branch/master/graph/badge.svg)](https://codecov.io/gh/ashb/slackarchive)
 
 SlackArchive can be started with just a few commands. Additionally, SlackArchive supports Let's Encrypt for easy HTTPS.
 
@@ -12,7 +12,7 @@ First, ensure you have both Docker (https://www.docker.com/community-edition) an
 
 Clone the SlackArchive docker repository:
 ```
-git clone https://github.com/dutchcoders/slackarchive-docker
+git clone https://github.com/ashb/slackarchive-docker
 ```
 
 Copy `slackarchive/config.yaml.sample` to `slackarchive/config.yaml`, and replace all the values within `{...}` with the appropriate values you want. Any place with a token or key, ensure those are random. You can generate a random value on the command line with bash using the following command: `openssl rand -base64 8 |md5 |head -c24;echo` (if you have OpenSSL) or without `ping -c 1 yahoo.com |md5 | head -c24; echo`. We avoid using `/dev/urandom` in case you are not using a UNIX-based machine.

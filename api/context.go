@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dutchcoders/slackarchive/api/errors"
+	"github.com/ashb/slackarchive/api/errors"
 	"github.com/go-pg/pg/orm"
 
 	"github.com/gorilla/mux"

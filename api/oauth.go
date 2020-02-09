@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dutchcoders/slackarchive/utils"
+	"github.com/ashb/slackarchive/utils"
 
 	"github.com/gorilla/sessions"
 	"github.com/nlopes/slack"

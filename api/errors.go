@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	errors "github.com/dutchcoders/slackarchive/api/errors"
+	errors "github.com/ashb/slackarchive/api/errors"
 )
 
 var (

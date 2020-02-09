@@ -1,10 +1,10 @@
 FROM golang:latest AS builder
 
-ADD . /go/src/github.com/dutchcoders/slackarchive
-WORKDIR /go/src/github.com/dutchcoders/slackarchive
+ADD . /go/src/github.com/ashb/slackarchive
+WORKDIR /go/src/github.com/ashb/slackarchive
 
 ARG LDFLAGS=""
-RUN go build -tags="" -o /go/bin/app github.com/dutchcoders/slackarchive
+RUN go build -tags="" -o /go/bin/app github.com/ashb/slackarchive
 
 FROM debian
 RUN apt-get update && apt-get install -y ca-certificates

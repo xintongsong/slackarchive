@@ -7,9 +7,9 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/dutchcoders/slackarchive/config"
-	"github.com/dutchcoders/slackarchive/models"
-	"github.com/dutchcoders/slackarchive/utils"
+	"github.com/ashb/slackarchive/config"
+	"github.com/ashb/slackarchive/models"
+	"github.com/ashb/slackarchive/utils"
 	"github.com/go-pg/pg"
 	"github.com/go-pg/pg/orm"
 	"github.com/nlopes/slack"

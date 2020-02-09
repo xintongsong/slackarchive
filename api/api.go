@@ -20,13 +20,13 @@ import (
 	errwrap "github.com/pkg/errors"
 	autocert "golang.org/x/crypto/acme/autocert"
 
-	config "github.com/dutchcoders/slackarchive/config"
-	models "github.com/dutchcoders/slackarchive/models"
-	utils "github.com/dutchcoders/slackarchive/utils"
+	config "github.com/ashb/slackarchive/config"
+	models "github.com/ashb/slackarchive/models"
+	utils "github.com/ashb/slackarchive/utils"
 	"github.com/go-pg/pg"
 	"github.com/nlopes/slack"
 
-	handlers "github.com/dutchcoders/slackarchive/api/handlers"
+	handlers "github.com/ashb/slackarchive/api/handlers"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"

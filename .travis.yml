@@ -10,7 +10,7 @@ go:
 sudo: required
 dist: trusty
 
-go_import_path: github.com/dutchcoders/slackarchive
+go_import_path: github.com/ashb/slackarchive
 
 services:
  - docker
@@ -25,7 +25,7 @@ install:
   - sudo apt-get update -qq
   - sudo apt-get install -y software-properties-common 
   - go get -u -v gopkg.in/alecthomas/gometalinter.v2
-  - go get -u -v github.com/dutchcoders/slackarchive
+  - go get -u -v github.com/ashb/slackarchive
   - gometalinter.v2 --install
 
 script:

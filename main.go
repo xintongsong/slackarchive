@@ -9,15 +9,15 @@ import (
 
 	cli "gopkg.in/urfave/cli.v1"
 
-	"github.com/dutchcoders/slackarchive/api"
-	"github.com/dutchcoders/slackarchive/config"
-	"github.com/dutchcoders/slackarchive/importer"
-	"github.com/dutchcoders/slackarchive/models"
+	"github.com/ashb/slackarchive/api"
+	"github.com/ashb/slackarchive/config"
+	"github.com/ashb/slackarchive/importer"
+	"github.com/ashb/slackarchive/models"
 	"github.com/go-pg/migrations"
 	"github.com/go-pg/pg"
 	"github.com/op/go-logging"
 
-	_ "github.com/dutchcoders/slackarchive/migrations"
+	_ "github.com/ashb/slackarchive/migrations"
 )
 
 var log = logging.MustGetLogger("main")
