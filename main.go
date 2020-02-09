@@ -103,44 +103,54 @@ func main() {
 	app.Run(os.Args)
 }
 
-func run(c *cli.Context) {
-	conf := config.MustLoad(c.GlobalString("config"))
+func run(c *cli.Context) error {
+	conf, err := config.Load(c.GlobalString("config"))
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	fmt.Println("conf", conf)
 
 	api := api.New(conf)
 	api.Serve()
+	return nil
 }
 
-func doImport(c *cli.Context) {
+func doImport(c *cli.Context) error {
 	if c.NArg() != 2 {
 		cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
 
 	}
-	conf := config.MustLoad(c.GlobalString("config"))
+	conf, err := config.Load(c.GlobalString("config"))
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
 	i := importer.New(conf, c.Bool("debug"))
 	i.Import(c.Args().Get(0), c.Args().Get(1))
+	return nil
 }
 
-func migrate(c *cli.Context) {
-	config := config.MustLoad(c.GlobalString("config"))
+func migrate(c *cli.Context) error {
+	config, err := config.Load(c.GlobalString("config"))
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
 
 	opts, err := pg.ParseURL(config.Database.DSN)
 	if err != nil {
-		panic(err)
+		return cli.NewExitError(err, 1)
 	}
 	db := pg.Connect(opts)
 	if c.Bool("debug") || c.Parent().Bool("debug") {
-		fmt.Println("debug")
 		db.AddQueryHook(models.DBLogger{Logger: log})
-	} else {
-		fmt.Println("ndebug")
 	}
 
 	migrations.DefaultCollection.DisableSQLAutodiscover(true)
 
 	if c.Command.Name == "create" {
 		if err := os.Chdir("migrations"); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return cli.NewExitError(err, 1)
 		}
 	}
 
@@ -155,4 +165,6 @@ func migrate(c *cli.Context) {
 	} else {
 		fmt.Printf("version is %d\n", oldVersion)
 	}
+
+	return nil
 }

@@ -37,12 +37,12 @@ type Config struct {
 	SessionName string `yaml:"session_name"`
 }
 
-func MustLoad(path string) *Config {
+func Load(path string) (*Config, error) {
 	var c Config
 	if err := c.Load(path); err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &c
+	return &c, nil
 }
 
 func (c *Config) NewSlackOAuthClient(redirectUri string) *slack.OAuthClient {
