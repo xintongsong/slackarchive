@@ -1,6 +1,6 @@
 module github.com/ashb/slackarchive
 
-go 1.13
+go 1.16
 
 require (
 	github.com/elazarl/go-bindata-assetfs v1.0.0
@@ -12,7 +12,6 @@ require (
 	github.com/gorilla/sessions v0.0.0-20160922145804-ca9ada445741
 	github.com/gorilla/websocket v1.2.0
 	github.com/jinzhu/inflection v0.0.0-20180308033659-04140366298a // indirect
-	github.com/lusis/go-slackbot v0.0.0-20180109053408-401027ccfef5 // indirect
 	github.com/lusis/slack-test v0.0.0-20190426140909-c40012f20018 // indirect
 	github.com/nlopes/slack v0.5.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d

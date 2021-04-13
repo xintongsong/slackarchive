@@ -1,0 +1,74 @@
+# github.com/elazarl/go-bindata-assetfs v1.0.0
+## explicit
+github.com/elazarl/go-bindata-assetfs
+# github.com/go-pg/migrations v6.7.2+incompatible
+## explicit
+github.com/go-pg/migrations
+# github.com/go-pg/pg v7.1.7+incompatible
+## explicit
+github.com/go-pg/pg
+github.com/go-pg/pg/internal
+github.com/go-pg/pg/internal/iszero
+github.com/go-pg/pg/internal/parser
+github.com/go-pg/pg/internal/pool
+github.com/go-pg/pg/internal/struct_filter
+github.com/go-pg/pg/internal/tag
+github.com/go-pg/pg/orm
+github.com/go-pg/pg/types
+github.com/go-pg/pg/urlvalues
+# github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f
+## explicit
+github.com/gorilla/context
+# github.com/gorilla/mux v1.6.1
+## explicit
+github.com/gorilla/mux
+# github.com/gorilla/securecookie v1.1.1
+## explicit
+github.com/gorilla/securecookie
+# github.com/gorilla/sessions v0.0.0-20160922145804-ca9ada445741
+## explicit
+github.com/gorilla/sessions
+# github.com/gorilla/websocket v1.2.0
+## explicit
+github.com/gorilla/websocket
+# github.com/jinzhu/inflection v0.0.0-20180308033659-04140366298a
+## explicit
+github.com/jinzhu/inflection
+# github.com/lusis/slack-test v0.0.0-20190426140909-c40012f20018
+## explicit
+# github.com/nlopes/slack v0.5.0
+## explicit
+github.com/nlopes/slack
+github.com/nlopes/slack/slackutilsx
+# github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
+## explicit
+github.com/nu7hatch/gouuid
+# github.com/onsi/ginkgo v1.12.0
+## explicit
+# github.com/onsi/gomega v1.9.0
+## explicit
+# github.com/op/go-logging v0.0.0-20160211212156-b2cb9fa56473
+## explicit
+github.com/op/go-logging
+# github.com/pkg/errors v0.8.0
+## explicit
+github.com/pkg/errors
+# github.com/stretchr/testify v1.4.0
+## explicit
+# github.com/tappleby/slack_auth_proxy v0.0.0-20150220022049-8628dfb9b447
+## explicit
+github.com/tappleby/slack_auth_proxy/slack
+# golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b
+## explicit
+golang.org/x/crypto/acme
+golang.org/x/crypto/acme/autocert
+golang.org/x/crypto/pbkdf2
+# gopkg.in/urfave/cli.v1 v1.20.0
+## explicit
+gopkg.in/urfave/cli.v1
+# gopkg.in/yaml.v2 v2.2.4
+## explicit
+gopkg.in/yaml.v2
+# mellium.im/sasl v0.2.1
+## explicit
+mellium.im/sasl
