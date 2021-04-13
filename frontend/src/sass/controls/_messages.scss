@@ -69,6 +69,7 @@
       }
     }
     .msg-body {
+      white-space: pre-wrap;
       font-size: 15px;
       line-height: 22px;
       @include antialiased();
