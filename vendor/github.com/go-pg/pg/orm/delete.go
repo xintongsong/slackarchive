@@ -21,22 +21,31 @@ func ForceDelete(db DB, model interface{}) error {
 }
 
 type deleteQuery struct {
-	q *Query
+	q           *Query
+	placeholder bool
 }
 
 var _ QueryAppender = (*deleteQuery)(nil)
 
-func (q deleteQuery) Copy() QueryAppender {
-	return deleteQuery{
-		q: q.q.Copy(),
+func (q *deleteQuery) Copy() *deleteQuery {
+	return &deleteQuery{
+		q:           q.q.Copy(),
+		placeholder: q.placeholder,
 	}
 }
 
-func (q deleteQuery) Query() *Query {
+func (q *deleteQuery) Query() *Query {
 	return q.q
 }
 
-func (q deleteQuery) AppendQuery(b []byte) ([]byte, error) {
+func (q *deleteQuery) AppendTemplate(b []byte) ([]byte, error) {
+	cp := q.Copy()
+	cp.q = cp.q.Formatter(dummyFormatter{})
+	cp.placeholder = true
+	return cp.AppendQuery(b)
+}
+
+func (q *deleteQuery) AppendQuery(b []byte) ([]byte, error) {
 	if q.q.stickyErr != nil {
 		return nil, q.q.stickyErr
 	}
@@ -55,9 +64,14 @@ func (q deleteQuery) AppendQuery(b []byte) ([]byte, error) {
 
 	b = append(b, " WHERE "...)
 	value := q.q.model.Value()
-	if q.q.isSliceModel() {
+	if q.q.isSliceModelWithData() {
 		table := q.q.model.Table()
-		b = appendColumnAndSliceValue(b, value, table.Alias, table.PKs)
+		err := table.checkPKs()
+		if err != nil {
+			return nil, err
+		}
+
+		b = appendColumnAndSliceValue(q.q, b, value, table.Alias, table.PKs)
 
 		if q.q.hasWhere() {
 			b = append(b, " AND "...)

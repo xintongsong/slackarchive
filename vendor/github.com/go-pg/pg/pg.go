@@ -1,6 +1,7 @@
 package pg
 
 import (
+	"context"
 	"io"
 	"log"
 	"os"
@@ -23,6 +24,10 @@ func init() {
 // Model returns new query for the optional model.
 func Model(model ...interface{}) *orm.Query {
 	return orm.NewQuery(nil, model...)
+}
+
+func ModelContext(c context.Context, model ...interface{}) *orm.Query {
+	return orm.NewQueryContext(c, nil, model...)
 }
 
 // Scan returns ColumnScanner that copies the columns in the
@@ -63,7 +68,7 @@ func In(slice interface{}) types.ValueAppender {
 //
 //    WHERE (id1, id2) IN ((1, 2), (3, 4))
 func InMulti(values ...interface{}) types.ValueAppender {
-	return types.In(values...)
+	return types.InMulti(values...)
 }
 
 // Array accepts a slice and returns a wrapper for working with PostgreSQL

@@ -1,7 +1,7 @@
 # github.com/go-pg/migrations v6.7.2+incompatible
 ## explicit
 github.com/go-pg/migrations
-# github.com/go-pg/pg v7.1.7+incompatible
+# github.com/go-pg/pg v8.0.7+incompatible
 ## explicit
 github.com/go-pg/pg
 github.com/go-pg/pg/internal
@@ -26,17 +26,10 @@ github.com/gorilla/securecookie
 ## explicit
 github.com/gorilla/sessions
 # github.com/gorilla/websocket v1.4.2
-## explicit
 github.com/gorilla/websocket
 # github.com/jinzhu/inflection v0.0.0-20180308033659-04140366298a
 ## explicit
 github.com/jinzhu/inflection
-# github.com/lusis/slack-test v0.0.0-20190426140909-c40012f20018
-## explicit
-# github.com/nlopes/slack v0.5.0
-## explicit
-github.com/nlopes/slack
-github.com/nlopes/slack/slackutilsx
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
 github.com/nu7hatch/gouuid
@@ -68,6 +61,8 @@ github.com/tappleby/slack_auth_proxy/slack
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/pbkdf2
+# golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae
+## explicit
 # gopkg.in/urfave/cli.v1 v1.20.0
 ## explicit
 gopkg.in/urfave/cli.v1

@@ -12,7 +12,6 @@ import (
 	"os/signal"
 	"path"
 	"regexp"
-	"sync"
 	"time"
 
 	"context"
@@ -24,6 +23,7 @@ import (
 	models "github.com/ashb/slackarchive/models"
 	utils "github.com/ashb/slackarchive/utils"
 	"github.com/go-pg/pg"
+	"github.com/go-pg/pg/orm"
 	"github.com/slack-go/slack"
 
 	handlers "github.com/ashb/slackarchive/api/handlers"
@@ -32,7 +32,6 @@ import (
 	"github.com/gorilla/sessions"
 
 	"net"
-	"strings"
 
 	logging "github.com/op/go-logging"
 )
@@ -40,34 +39,14 @@ import (
 var log = logging.MustGetLogger("slackarchive-api")
 
 type api struct {
-	session *pg.DB
+	session orm.DB
 	config  *config.Config
 	store   *sessions.CookieStore
-
-	wg sync.WaitGroup
-
-	indexChan chan (Message)
-
-	// Registered connections.
-	connections map[*connection]bool
-
-	// Register requests from the connections.
-	register chan *connection
-
-	// Unregister requests from connections.
-	unregister chan *connection
 }
 
-func New(config *config.Config) *api {
+func New(config *config.Config, db orm.DB) *api {
 
 	log.Info("Starting")
-
-	opts, err := pg.ParseURL(config.Database.DSN)
-	if err != nil {
-		panic(err)
-	}
-	db := pg.Connect(opts)
-	db.AddQueryHook(models.DBLogger{Logger: log})
 
 	var store = sessions.NewCookieStore(
 		[]byte(config.Cookies.AuthenticationKey),
@@ -75,27 +54,9 @@ func New(config *config.Config) *api {
 	)
 
 	return &api{
-		session:     db,
-		config:      config,
-		store:       store,
-		indexChan:   make(chan Message),
-		connections: map[*connection]bool{},
-		register:    make(chan *connection),
-		unregister:  make(chan *connection),
-	}
-}
-
-func (api *api) run() {
-	for {
-		select {
-		case c := <-api.register:
-			api.connections[c] = true
-		case c := <-api.unregister:
-			if _, ok := api.connections[c]; ok {
-				delete(api.connections, c)
-				close(c.send)
-			}
-		}
+		session: db,
+		config:  config,
+		store:   store,
 	}
 }
 
@@ -337,8 +298,8 @@ func (api *api) Team(ctx *Context) (*models.Team, error) {
 func (api *api) messagesHandler(ctx *Context) error {
 
 	response := struct {
-		Messages   []slack.Message `json:"messages"`
-		TotalCount int             `json:"total"`
+		Messages   []slack.Msg `json:"messages"`
+		TotalCount int         `json:"total"`
 		Aggs       struct {
 			Buckets map[string]int64 `json:"buckets"`
 		} `json:"aggs"`
@@ -346,7 +307,7 @@ func (api *api) messagesHandler(ctx *Context) error {
 			Users map[string]models.User `json:"users"`
 		} `json:"related"`
 	}{
-		Messages: []slack.Message{},
+		Messages: []slack.Msg{},
 		Aggs: struct {
 			Buckets map[string]int64 `json:"buckets"`
 		}{
@@ -456,7 +417,7 @@ func (api *api) messagesHandler(ctx *Context) error {
 	}
 
 	r := regexp.MustCompile(`\<\@(.+?)\>`)
-	response.Messages = make([]slack.Message, 0, len(messages))
+	response.Messages = make([]slack.Msg, 0, len(messages))
 
 	// UserIDs to find
 	userids := make(map[string]struct{})
@@ -526,35 +487,6 @@ func hash(s string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// serveWs handles websocket requests from the peer.
-func (api *api) serveWs(w http.ResponseWriter, r *http.Request) {
-	if auth := r.Header.Get("Authorization"); auth == "" {
-		w.WriteHeader(403)
-		return
-	} else if !strings.HasPrefix(auth, "Token") {
-		w.WriteHeader(403)
-		return
-	} else if strings.Compare(auth[6:], hash(api.config.Bot.Token)) != 0 {
-		w.WriteHeader(403)
-		return
-	}
-
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Error("Error upgrading connection:", err)
-		return
-	}
-
-	c := &connection{send: make(chan []byte, 256), ws: ws, api: api}
-	defer c.Close()
-
-	api.register <- c
-	log.Infof("Connection upgraded: %s", ws.RemoteAddr())
-
-	go c.readPump()
-	c.writePump()
-}
-
 func (api *api) Serve() {
 	r := mux.NewRouter()
 
@@ -572,12 +504,6 @@ func (api *api) Serve() {
 	*/
 	sr.HandleFunc("/oauth/login", api.ContextHandlerFunc(api.oAuthLoginHandler)).Methods("GET")
 	sr.HandleFunc("/oauth/callback", api.ContextHandlerFunc(api.oAuthCallbackHandler)).Methods("GET")
-
-	// run websocket server
-	go api.run()
-	//go api.indexer()
-
-	r.HandleFunc("/ws", api.serveWs)
 
 	sh := http.FileServer(
 		AssetFS(),
@@ -658,6 +584,4 @@ func (api *api) Serve() {
 	defer cancel()
 
 	h.Shutdown(ctx)
-
-	//mg.Wait()
 }

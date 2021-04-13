@@ -2,10 +2,14 @@ package struct_filter
 
 import (
 	"reflect"
+
+	"github.com/go-pg/pg/internal"
+	"github.com/go-pg/pg/internal/tag"
 )
 
 type Struct struct {
-	Fields []*Field
+	TableName string
+	Fields    []*Field
 }
 
 func NewStruct(typ reflect.Type) *Struct {
@@ -19,7 +23,7 @@ func NewStruct(typ reflect.Type) *Struct {
 func (s *Struct) Field(name string) *Field {
 	col, opCode, _ := splitColumnOperator(name, "__")
 	for _, f := range s.Fields {
-		if f.column == col && f.opCode == opCode {
+		if f.Column == col && f.opCode == opCode {
 			return f
 		}
 	}
@@ -47,6 +51,13 @@ func addFields(s *Struct, typ reflect.Type, baseIndex []int) {
 			}
 
 			addFields(s, sfType, sf.Index)
+			continue
+		}
+
+		if sf.Name == "tableName" {
+			sqlTag := tag.Parse(sf.Tag.Get("sql"))
+			name, _ := tag.Unquote(sqlTag.Name)
+			s.TableName = internal.QuoteTableName(name)
 			continue
 		}
 

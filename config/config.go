@@ -8,6 +8,11 @@ import (
 	"github.com/tappleby/slack_auth_proxy/slack"
 )
 
+type TokenConfig struct {
+	BotToken   string `yaml:"bot"`
+	OAuthToken string `yaml:"oauth"`
+}
+
 type Config struct {
 	Listen    string `yaml:"listen"`
 	ListenTLS string `yaml:"listen_tls"`
@@ -21,6 +26,8 @@ type Config struct {
 	Database struct {
 		DSN string `yaml:"dsn"`
 	} `yaml:"database"`
+
+	BotTokens []TokenConfig `yaml:"bot_tokens"`
 
 	Slack struct {
 		ClientId     string `yaml:"client_id"`

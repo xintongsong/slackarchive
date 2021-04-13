@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/go-pg/pg/internal"
 	"github.com/go-pg/pg/internal/pool"
@@ -39,9 +40,13 @@ func (db *baseDB) Begin() (*Tx, error) {
 		db:  db.withPool(pool.NewSingleConnPool(db.pool)),
 		ctx: db.db.Context(),
 	}
-	if err := tx.begin(); err != nil {
+
+	err := tx.begin()
+	if err != nil {
+		tx.close()
 		return nil, err
 	}
+
 	return tx, nil
 }
 
@@ -56,7 +61,7 @@ func (db *baseDB) RunInTransaction(fn func(*Tx) error) error {
 	return tx.RunInTransaction(fn)
 }
 
-// Begin returns the transaction.
+// Begin returns current transaction. It does not start new transaction.
 func (tx *Tx) Begin() (*Tx, error) {
 	return tx, nil
 }
@@ -78,8 +83,8 @@ func (tx *Tx) RunInTransaction(fn func(*Tx) error) error {
 	return tx.Commit()
 }
 
-func (tx *Tx) withConn(fn func(cn *pool.Conn) error) error {
-	err := tx.db.withConn(fn)
+func (tx *Tx) withConn(c context.Context, fn func(cn *pool.Conn) error) error {
+	err := tx.db.withConn(c, fn)
 	if err == pool.ErrClosed {
 		return errTxDone
 	}
@@ -116,9 +121,17 @@ func (tx *Tx) Prepare(q string) (*Stmt, error) {
 }
 
 // Exec is an alias for DB.Exec.
-func (tx *Tx) Exec(query interface{}, params ...interface{}) (res Result, err error) {
-	err = tx.withConn(func(cn *pool.Conn) error {
-		event := tx.db.queryStarted(tx, query, params, 0)
+func (tx *Tx) Exec(query interface{}, params ...interface{}) (Result, error) {
+	return tx.exec(nil, query, params...)
+}
+
+func (tx *Tx) ExecContext(c context.Context, query interface{}, params ...interface{}) (Result, error) {
+	return tx.exec(c, query, params...)
+}
+
+func (tx *Tx) exec(c context.Context, query interface{}, params ...interface{}) (res Result, err error) {
+	err = tx.withConn(c, func(cn *pool.Conn) error {
+		event := tx.db.queryStarted(c, tx, query, params, 0)
 		res, err = tx.db.simpleQuery(cn, query, params...)
 		tx.db.queryProcessed(res, err, event)
 		return err
@@ -128,7 +141,15 @@ func (tx *Tx) Exec(query interface{}, params ...interface{}) (res Result, err er
 
 // ExecOne is an alias for DB.ExecOne.
 func (tx *Tx) ExecOne(query interface{}, params ...interface{}) (Result, error) {
-	res, err := tx.Exec(query, params...)
+	return tx.execOne(nil, query, params...)
+}
+
+func (tx *Tx) ExecOneContext(c context.Context, query interface{}, params ...interface{}) (Result, error) {
+	return tx.execOne(c, query, params...)
+}
+
+func (tx *Tx) execOne(c context.Context, query interface{}, params ...interface{}) (Result, error) {
+	res, err := tx.ExecContext(c, query, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -140,9 +161,17 @@ func (tx *Tx) ExecOne(query interface{}, params ...interface{}) (Result, error) 
 }
 
 // Query is an alias for DB.Query.
-func (tx *Tx) Query(model interface{}, query interface{}, params ...interface{}) (res Result, err error) {
-	err = tx.withConn(func(cn *pool.Conn) error {
-		event := tx.db.queryStarted(tx, query, params, 0)
+func (tx *Tx) Query(model interface{}, query interface{}, params ...interface{}) (Result, error) {
+	return tx.query(nil, model, query, params...)
+}
+
+func (tx *Tx) QueryContext(c context.Context, model interface{}, query interface{}, params ...interface{}) (Result, error) {
+	return tx.query(c, model, query, params...)
+}
+
+func (tx *Tx) query(c context.Context, model interface{}, query interface{}, params ...interface{}) (res Result, err error) {
+	err = tx.withConn(c, func(cn *pool.Conn) error {
+		event := tx.db.queryStarted(c, tx, query, params, 0)
 		res, err = tx.db.simpleQueryData(cn, model, query, params...)
 		tx.db.queryProcessed(res, err, event)
 		return err
@@ -152,7 +181,7 @@ func (tx *Tx) Query(model interface{}, query interface{}, params ...interface{})
 	}
 
 	if mod := res.Model(); mod != nil && res.RowsReturned() > 0 {
-		if err = mod.AfterQuery(tx); err != nil {
+		if err = mod.AfterQuery(c, tx); err != nil {
 			return res, err
 		}
 	}
@@ -162,12 +191,20 @@ func (tx *Tx) Query(model interface{}, query interface{}, params ...interface{})
 
 // QueryOne is an alias for DB.QueryOne.
 func (tx *Tx) QueryOne(model interface{}, query interface{}, params ...interface{}) (Result, error) {
+	return tx.queryOne(nil, model, query, params...)
+}
+
+func (tx *Tx) QueryOneContext(c context.Context, model interface{}, query interface{}, params ...interface{}) (Result, error) {
+	return tx.queryOne(c, model, query, params...)
+}
+
+func (tx *Tx) queryOne(c context.Context, model interface{}, query interface{}, params ...interface{}) (Result, error) {
 	mod, err := orm.NewModel(model)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := tx.Query(mod, query, params...)
+	res, err := tx.QueryContext(c, mod, query, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +218,10 @@ func (tx *Tx) QueryOne(model interface{}, query interface{}, params ...interface
 // Model is an alias for DB.Model.
 func (tx *Tx) Model(model ...interface{}) *orm.Query {
 	return orm.NewQuery(tx, model...)
+}
+
+func (tx *Tx) ModelContext(c context.Context, model ...interface{}) *orm.Query {
+	return orm.NewQueryContext(c, tx, model...)
 }
 
 // Select is an alias for DB.Select.
@@ -220,7 +261,7 @@ func (tx *Tx) DropTable(model interface{}, opt *orm.DropTableOptions) error {
 
 // CopyFrom is an alias for DB.CopyFrom.
 func (tx *Tx) CopyFrom(r io.Reader, query interface{}, params ...interface{}) (res Result, err error) {
-	err = tx.withConn(func(cn *pool.Conn) error {
+	err = tx.withConn(nil, func(cn *pool.Conn) error {
 		res, err = tx.db.copyFrom(cn, r, query, params...)
 		return err
 	})
@@ -229,7 +270,7 @@ func (tx *Tx) CopyFrom(r io.Reader, query interface{}, params ...interface{}) (r
 
 // CopyTo is an alias for DB.CopyTo.
 func (tx *Tx) CopyTo(w io.Writer, query interface{}, params ...interface{}) (res Result, err error) {
-	err = tx.withConn(func(cn *pool.Conn) error {
+	err = tx.withConn(nil, func(cn *pool.Conn) error {
 		res, err = tx.db.copyTo(cn, w, query, params...)
 		return err
 	})
@@ -241,28 +282,41 @@ func (tx *Tx) FormatQuery(dst []byte, query string, params ...interface{}) []byt
 }
 
 func (tx *Tx) begin() error {
-	_, err := tx.Exec("BEGIN")
-	if err != nil {
-		tx.close(err)
+	var lastErr error
+	for attempt := 0; attempt <= tx.db.opt.MaxRetries; attempt++ {
+		if attempt > 0 {
+			time.Sleep(tx.db.retryBackoff(attempt - 1))
+
+			err := tx.db.pool.(*pool.SingleConnPool).Reset()
+			if err != nil {
+				internal.Logf(err.Error())
+				continue
+			}
+		}
+
+		_, lastErr = tx.Exec("BEGIN")
+		if !tx.db.shouldRetry(lastErr) {
+			break
+		}
 	}
-	return err
+	return lastErr
 }
 
 // Commit commits the transaction.
 func (tx *Tx) Commit() error {
 	_, err := tx.Exec("COMMIT")
-	tx.close(err)
+	tx.close()
 	return err
 }
 
 // Rollback aborts the transaction.
 func (tx *Tx) Rollback() error {
 	_, err := tx.Exec("ROLLBACK")
-	tx.close(err)
+	tx.close()
 	return err
 }
 
-func (tx *Tx) close(lastErr error) {
+func (tx *Tx) close() {
 	tx.stmtsMu.Lock()
 	defer tx.stmtsMu.Unlock()
 

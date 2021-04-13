@@ -1,22 +1,20 @@
 package pg
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/go-pg/pg/orm"
 )
 
-type dummyDB struct {
-	orm.DB
-}
+type dummyFormatter struct{}
 
-var _ orm.DB = dummyDB{}
-
-func (dummyDB) FormatQuery(dst []byte, query string, params ...interface{}) []byte {
-	return append(dst, query...)
+func (dummyFormatter) FormatQuery(b []byte, query string, params ...interface{}) []byte {
+	return append(b, query...)
 }
 
 type QueryEvent struct {
+	Ctx     context.Context
 	DB      orm.DB
 	Query   interface{}
 	Params  []interface{}
@@ -50,12 +48,10 @@ func (ev *QueryEvent) FormattedQuery() (string, error) {
 
 func queryString(query interface{}) ([]byte, error) {
 	switch query := query.(type) {
-	case orm.QueryAppender:
-		query = query.Copy()
-		query.Query().DB(dummyDB{})
-		return query.AppendQuery(nil)
+	case orm.TemplateAppender:
+		return query.AppendTemplate(nil)
 	case string:
-		return dummyDB{}.FormatQuery(nil, query), nil
+		return dummyFormatter{}.FormatQuery(nil, query), nil
 	default:
 		return nil, fmt.Errorf("pg: can't append %T", query)
 	}
@@ -67,6 +63,7 @@ func (db *baseDB) AddQueryHook(hook QueryHook) {
 }
 
 func (db *baseDB) queryStarted(
+	c context.Context,
 	ormDB orm.DB,
 	query interface{},
 	params []interface{},
@@ -77,6 +74,7 @@ func (db *baseDB) queryStarted(
 	}
 
 	event := &QueryEvent{
+		Ctx:     c,
 		DB:      ormDB,
 		Query:   query,
 		Params:  params,

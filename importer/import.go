@@ -208,7 +208,7 @@ func (ti *TeamImporter) importMessages(channelID string, path string) error {
 		}
 
 		m := &models.Message{ChannelID: channelID}
-		if err := m.Merge(message); err != nil {
+		if err := m.Merge(&message.Msg); err != nil {
 			log.Errorf("Error merging message: %s", err.Error())
 			continue
 		}

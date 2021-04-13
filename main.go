@@ -10,6 +10,7 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 
 	"github.com/ashb/slackarchive/api"
+	"github.com/ashb/slackarchive/bot"
 	"github.com/ashb/slackarchive/config"
 	"github.com/ashb/slackarchive/importer"
 	"github.com/ashb/slackarchive/models"
@@ -44,7 +45,12 @@ func main() {
 		{
 			Name:        "run",
 			Action:      run,
-			Description: "Run webserver",
+			Description: "Run webserver and Slack bot user",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: "debug, D",
+				},
+			},
 		},
 		{
 			Name:   "import",
@@ -111,7 +117,14 @@ func run(c *cli.Context) error {
 
 	fmt.Println("conf", conf)
 
-	api := api.New(conf)
+	db, err := models.Connect(conf.Database.DSN, c.Bool("debug"))
+	if err != nil {
+		return err
+	}
+
+	api := api.New(conf, db)
+	bot := bot.New(conf, db)
+	bot.Start()
 	api.Serve()
 	return nil
 }

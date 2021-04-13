@@ -13,18 +13,27 @@ func Insert(db DB, model ...interface{}) error {
 type insertQuery struct {
 	q               *Query
 	returningFields []*Field
+	placeholder     bool
 }
 
 var _ QueryAppender = (*insertQuery)(nil)
 
-func (q *insertQuery) Copy() QueryAppender {
+func (q *insertQuery) Copy() *insertQuery {
 	return &insertQuery{
-		q: q.q.Copy(),
+		q:           q.q.Copy(),
+		placeholder: q.placeholder,
 	}
 }
 
 func (q *insertQuery) Query() *Query {
 	return q.q
+}
+
+func (q *insertQuery) AppendTemplate(b []byte) ([]byte, error) {
+	cp := q.Copy()
+	cp.q = cp.q.Formatter(dummyFormatter{})
+	cp.placeholder = true
+	return cp.AppendQuery(b)
 }
 
 func (q *insertQuery) AppendQuery(b []byte) ([]byte, error) {
@@ -65,21 +74,14 @@ func (q *insertQuery) AppendQuery(b []byte) ([]byte, error) {
 		b = append(b, " ("...)
 		b = appendColumns(b, "", fields)
 		b = append(b, ") VALUES ("...)
-		if value.Kind() == reflect.Struct {
-			b = q.appendValues(b, fields, value)
-		} else {
-			if value.Len() == 0 {
+		if m, ok := q.q.model.(*sliceTableModel); ok {
+			if m.sliceLen == 0 {
 				err = fmt.Errorf("pg: can't bulk-insert empty slice %s", value.Type())
 				return nil, err
 			}
-
-			for i := 0; i < value.Len(); i++ {
-				el := indirect(value.Index(i))
-				b = q.appendValues(b, fields, el)
-				if i != value.Len()-1 {
-					b = append(b, "), ("...)
-				}
-			}
+			b = q.appendSliceValues(b, fields, value)
+		} else {
+			b = q.appendValues(b, fields, value)
 		}
 		b = append(b, ")"...)
 	}
@@ -120,7 +122,7 @@ func (q *insertQuery) AppendQuery(b []byte) ([]byte, error) {
 	return b, q.q.stickyErr
 }
 
-func (q *insertQuery) appendValues(b []byte, fields []*Field, v reflect.Value) []byte {
+func (q *insertQuery) appendValues(b []byte, fields []*Field, strct reflect.Value) []byte {
 	for i, f := range fields {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -132,12 +134,30 @@ func (q *insertQuery) appendValues(b []byte, fields []*Field, v reflect.Value) [
 			continue
 		}
 
-		if (f.Default != "" || f.OmitZero()) && f.IsZeroValue(v) {
+		if q.placeholder {
+			b = append(b, '?')
+		} else if (f.Default != "" || f.OmitZero()) && f.IsZeroValue(strct) {
 			b = append(b, "DEFAULT"...)
 			q.addReturningField(f)
 		} else {
-			b = f.AppendValue(b, v, 1)
+			b = f.AppendValue(b, strct, 1)
 		}
+	}
+	return b
+}
+
+func (q *insertQuery) appendSliceValues(b []byte, fields []*Field, slice reflect.Value) []byte {
+	if q.placeholder {
+		b = q.appendValues(b, fields, reflect.Value{})
+		return b
+	}
+
+	for i := 0; i < slice.Len(); i++ {
+		if i > 0 {
+			b = append(b, "), ("...)
+		}
+		el := indirect(slice.Index(i))
+		b = q.appendValues(b, fields, el)
 	}
 	return b
 }

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +27,13 @@ func TimestampToTime(ts string) (*time.Time, error) {
 	return &t, nil
 }
 
+func TimeToTimestamp(t time.Time) string {
+	ns := t.UTC().UnixNano()
+
+	return fmt.Sprintf("%d.%06d", ns/int64(time.Second), ns%int64(time.Second)/int64(time.Microsecond))
+
+}
+
 // Msg contains information about a slack message. Most
 type Message struct {
 	ChannelID string   `sql:",pk"`
@@ -37,10 +45,10 @@ type Message struct {
 	Timestamp       *time.Time `sql:",pk"`
 	ThreadTimestamp *time.Time `json:"thread_ts,omitempty" `
 
-	Msg *slack.Message
+	Msg *slack.Msg
 }
 
-func (m *Message) Merge(message slack.Message) error {
+func (m *Message) Merge(message *slack.Msg) error {
 	if message.Channel != "" {
 		m.ChannelID = message.Channel
 	}
@@ -56,6 +64,6 @@ func (m *Message) Merge(message slack.Message) error {
 	if err != nil {
 		return err
 	}
-	m.Msg = &message
+	m.Msg = message
 	return nil
 }

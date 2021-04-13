@@ -62,7 +62,11 @@ func compositeScanner(typ reflect.Type) types.ScannerFunc {
 			}
 
 			field := table.Fields[i]
-			err = field.ScanValue(v, elemReader, len(elem))
+			if elem == nil {
+				err = field.ScanValue(v, elemReader, -1)
+			} else {
+				err = field.ScanValue(v, elemReader, len(elem))
+			}
 			if err != nil && firstErr == nil {
 				firstErr = err
 			}
@@ -86,7 +90,7 @@ func compositeAppender(typ reflect.Type) types.AppenderFunc {
 			v = v.Elem()
 		}
 
-		b = append(b, '(')
+		b = append(b, "ROW("...)
 		for i, f := range table.Fields {
 			if i > 0 {
 				b = append(b, ',')

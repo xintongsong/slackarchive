@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"github.com/go-pg/pg/types"
 	"strconv"
 )
 
@@ -25,15 +26,24 @@ type createTableQuery struct {
 	opt *CreateTableOptions
 }
 
-func (q createTableQuery) Copy() QueryAppender {
-	return q
+func (q *createTableQuery) Copy() *createTableQuery {
+	return &createTableQuery{
+		q:   q.q.Copy(),
+		opt: q.opt,
+	}
 }
 
-func (q createTableQuery) Query() *Query {
+func (q *createTableQuery) Query() *Query {
 	return q.q
 }
 
-func (q createTableQuery) AppendQuery(b []byte) ([]byte, error) {
+func (q *createTableQuery) AppendTemplate(b []byte) ([]byte, error) {
+	cp := q.Copy()
+	cp.q = cp.q.Formatter(dummyFormatter{})
+	return cp.AppendQuery(b)
+}
+
+func (q *createTableQuery) AppendQuery(b []byte) ([]byte, error) {
 	if q.q.stickyErr != nil {
 		return nil, q.q.stickyErr
 	}
@@ -60,14 +70,7 @@ func (q createTableQuery) AppendQuery(b []byte) ([]byte, error) {
 
 		b = append(b, field.Column...)
 		b = append(b, " "...)
-		if q.opt != nil && q.opt.Varchar > 0 &&
-			field.SQLType == "text" && !field.HasFlag(customTypeFlag) {
-			b = append(b, "varchar("...)
-			b = strconv.AppendInt(b, int64(q.opt.Varchar), 10)
-			b = append(b, ")"...)
-		} else {
-			b = append(b, field.SQLType...)
-		}
+		b = q.appendSQLType(b, field)
 		if field.HasFlag(NotNullFlag) {
 			b = append(b, " NOT NULL"...)
 		}
@@ -93,7 +96,37 @@ func (q createTableQuery) AppendQuery(b []byte) ([]byte, error) {
 
 	b = append(b, ")"...)
 
+	if table.Tablespace != "" {
+		b = q.appendTablespace(b, table.Tablespace)
+	}
+
 	return b, q.q.stickyErr
+}
+
+func (q *createTableQuery) appendSQLType(b []byte, field *Field) []byte {
+	if q.opt != nil && q.opt.Varchar > 0 &&
+		field.SQLType == "text" && !field.HasFlag(customTypeFlag) {
+		b = append(b, "varchar("...)
+		b = strconv.AppendInt(b, int64(q.opt.Varchar), 10)
+		b = append(b, ")"...)
+		return b
+	}
+	if field.HasFlag(PrimaryKeyFlag) {
+		return append(b, pkSQLType(field.SQLType)...)
+	}
+	return append(b, field.SQLType...)
+}
+
+func pkSQLType(s string) string {
+	switch s {
+	case "smallint":
+		return "smallserial"
+	case "integer":
+		return "serial"
+	case "bigint":
+		return "bigserial"
+	}
+	return s
 }
 
 func appendPKConstraint(b []byte, pks []*Field) []byte {
@@ -139,6 +172,12 @@ func (q createTableQuery) appendFKConstraint(b []byte, table *Table, rel *Relati
 		b = append(b, s...)
 	}
 
+	return b
+}
+
+func (q createTableQuery) appendTablespace(b []byte, tableSpace types.Q) []byte {
+	b = append(b, " TABLESPACE "...)
+	b = append(b, tableSpace...)
 	return b
 }
 
