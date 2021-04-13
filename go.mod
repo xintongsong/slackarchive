@@ -3,7 +3,6 @@ module github.com/ashb/slackarchive
 go 1.16
 
 require (
-	github.com/elazarl/go-bindata-assetfs v1.0.0
 	github.com/go-pg/migrations v6.7.2+incompatible
 	github.com/go-pg/pg v7.1.7+incompatible
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f // indirect

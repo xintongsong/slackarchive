@@ -1,23 +1,20 @@
 package api
 
 import (
+	"io/fs"
 	"net/http"
 	"os"
 
-	assets "github.com/ashb/slackarchive/frontend"
-	assetfs "github.com/elazarl/go-bindata-assetfs"
+	frontend "github.com/ashb/slackarchive/frontend"
 )
 
 func AssetFS() *assetFS {
+	subFS, err := fs.Sub(frontend.AssetFS, frontend.Prefix)
+	if err != nil {
+		panic(err)
+	}
 	return &assetFS{
-		FileSystem: &assetfs.AssetFS{
-			AssetInfo: func(path string) (os.FileInfo, error) {
-				return os.Stat(path)
-			},
-			Asset:    assets.Asset,
-			AssetDir: assets.AssetDir,
-			Prefix:   assets.Prefix,
-		},
+		FileSystem: http.FS(subFS),
 		DefaultDoc: "index.html",
 	}
 }
