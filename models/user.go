@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/go-pg/pg"
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 )
 
 // UserProfile contains all the information details of a given user

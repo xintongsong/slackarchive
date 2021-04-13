@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 )
 
 func TimestampToTime(ts string) (*time.Time, error) {

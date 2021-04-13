@@ -24,7 +24,7 @@ import (
 	models "github.com/ashb/slackarchive/models"
 	utils "github.com/ashb/slackarchive/utils"
 	"github.com/go-pg/pg"
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 
 	handlers "github.com/ashb/slackarchive/api/handlers"
 

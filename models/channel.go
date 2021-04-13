@@ -3,7 +3,7 @@ package models
 import (
 	"net/url"
 
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 
 	"github.com/go-pg/pg/orm"
 	"github.com/go-pg/pg/urlvalues"

@@ -12,8 +12,8 @@ import (
 	"github.com/ashb/slackarchive/utils"
 	"github.com/go-pg/pg"
 	"github.com/go-pg/pg/orm"
-	"github.com/nlopes/slack"
 	"github.com/op/go-logging"
+	"github.com/slack-go/slack"
 )
 
 var log = logging.MustGetLogger("importer")
