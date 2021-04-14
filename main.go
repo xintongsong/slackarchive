@@ -115,8 +115,6 @@ func run(c *cli.Context) error {
 		return cli.NewExitError(err, 1)
 	}
 
-	fmt.Println("conf", conf)
-
 	db, err := models.Connect(conf.Database.DSN, c.Bool("debug"))
 	if err != nil {
 		return err
