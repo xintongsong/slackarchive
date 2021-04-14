@@ -18,8 +18,7 @@ require (
 	github.com/slack-go/slack v0.8.2
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tappleby/slack_auth_proxy v0.0.0-20150220022049-8628dfb9b447
-	golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b
-	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae // indirect
+	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	gopkg.in/urfave/cli.v1 v1.20.0
 	gopkg.in/yaml.v2 v2.2.4
 	mellium.im/sasl v0.2.1 // indirect
