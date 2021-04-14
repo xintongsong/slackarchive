@@ -159,8 +159,6 @@ func migrate(c *cli.Context) error {
 		db.AddQueryHook(models.DBLogger{Logger: log})
 	}
 
-	migrations.DefaultCollection.DisableSQLAutodiscover(true)
-
 	if c.Command.Name == "create" {
 		if err := os.Chdir("migrations"); err != nil {
 			return cli.NewExitError(err, 1)

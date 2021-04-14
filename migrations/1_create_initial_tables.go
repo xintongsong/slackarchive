@@ -5,6 +5,7 @@ import (
 )
 
 func init() {
+	migrations.DefaultCollection.DisableSQLAutodiscover(true)
 	migrations.MustRegisterTx(func(db migrations.DB) error {
 		_, err := db.Exec(`
 			CREATE AGGREGATE tsvector_agg(tsvector) (
