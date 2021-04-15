@@ -1,13 +1,13 @@
 <template>
   <div id="app" :class="{'with-menu': showMenu, 'ready': appIsReady}">
     <div class="splash" v-show="!appIsReady">
-      <img src="./assets/logo.png" alt="SlackArchive.io" class="img-fluid">
+      <img src="./assets/logo.png" alt="SlackArchives.org" class="img-fluid">
       <div class="loader loader-sm" v-show="!error"></div>
     </div>
     <div v-if="error" :class="'error-'+errorType" class="error">{{ error }}
       <span v-if="!errorType">
         <span class="smiley">☹</span>
-        <a href="http://slackarchive.io/#support" target="_blank">Let us know</a>
+        <a href="http://slack-archives.org/#support" target="_blank">Let us know</a>
       </span>
     </div>
     <top-bar v-if="appIsReady" :team="team" @toggleMenu="onMenuToggle"></top-bar>

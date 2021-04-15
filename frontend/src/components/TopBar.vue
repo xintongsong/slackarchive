@@ -11,14 +11,11 @@
       </div>
       <ul class="header-nav">
         <li v-if="team"><a :href="'http://'+team.domain+'.slack.com/'" target="_blank">Open Slack</a></li>
-        <li v-if="team && team.domain == 'kubernetes'" class="hidden-sm">
-          <a href="http://slack.kubernetes.io/" target="_blank">Join {{ team.name }}</a>
-        </li>
       </ul>
       <div class="promo">
-        <a href="https://slackarchive.io" target="_blank">
-          <img src="../assets/logo.png" alt="SlackArchive.io" class="logo logo-md">
-          <img src="../assets/logo-symbol.png" alt="SlackArchive.io" class="logo logo-xs">
+        <a href="https://slack-archives.org" target="_blank">
+          <img src="../assets/logo.png" alt="SlackArchives.org" class="logo logo-md">
+          <img src="../assets/logo-symbol.png" alt="SlackArchives.org" class="logo logo-xs">
         </a>
       </div>
     </div>
