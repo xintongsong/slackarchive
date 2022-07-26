@@ -278,7 +278,6 @@ func (api *api) Team(ctx *Context) (*models.Team, error) {
 	}
 
 	team := &models.Team{
-		IsDisabled: false,
 		Domain:     host,
 	}
 

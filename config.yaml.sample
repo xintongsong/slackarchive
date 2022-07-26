@@ -1,16 +1,14 @@
-listen: 127.0.0.1:8080
-# listen_tls: 127.0.0.1:8443
+listen: 0.0.0.0:8080
 
-bot:
-    token: 1234
+database:
+    dsn: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
 
-elasticsearch:
-    url: http://127.0.0.1:9200/
+bot_tokens:
+    - bot: <randome-token-1>
+      oauth: <xoxb-token>
 
-token: "{random_token_for_bots_to_connect}"
+team: <team-domain>
 
 cookies:
-    authentication_key: "{random_authentication_key_here}"
-    encryption_key: "{random_encryption_key_here}"
-
-session_name: auth
+    authentication_key: "<randome-token-2>
+    encryption_key: "<randome-token-3>"

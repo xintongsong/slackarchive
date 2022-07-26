@@ -1,67 +1,49 @@
-# SlackArchive [![Go Report Card](https://goreportcard.com/badge/ashb/slackarchive)](https://goreportcard.com/report/ashb/slackarchive) [![codecov](https://codecov.io/gh/ashb/slackarchive/branch/master/graph/badge.svg)](https://codecov.io/gh/ashb/slackarchive)
+# SlackArchive
 
-SlackArchive can be started with just a few commands. Additionally, SlackArchive supports Let's Encrypt for easy HTTPS.
+This project is a variant of [ashb/slackarchive](https://github.com/ashb/slackarchive) and [dutchcoders/slackarchive](https://github.com/dutchcoders/slackarchive).
+It has also changed quite a lot compared to the upstream projects, in order to better work with the up-to-date Slack APIs.
 
-[![Screenshot of UI](slackarchive-screen.png)](https://web.archive.org/web/20171227105316/http://slackarchive.io:80/)
+## Prerequisites
 
-## Docker 
+- Ensure both Docker and Docker Compose are installed
+- [Create an app](https://api.slack.com/) in Slack
+    - You would need the following permissions: `channels:history`, `channels:join`, `channels:read`, `files:read`, `links:read`, `metadata.message:read`, `reactions:read`, `team:read`, `users:read`
+    - Install your app to your workspace, and you should get an OAuth Token (starting with `xoxb-`)
 
-Using SlackArchive with Docker is easy. All components and dependencies will be start correctly.
+## Configuration
 
-First, ensure you have both Docker (https://www.docker.com/community-edition) and Docker Compose (https://docs.docker.com/compose/install/) on your native architecture (wherever you are going to run SlackArchive).
+- Create a configuration file: `cp config.yaml.sample config.yaml`.
+- Edit the configuration file and replace everything wrapped with `<>`. 
+    - `<xoxb-token>` - The OAuth Token you get when installing your app to your workspace.
+    - `<team-domain>` - The unique domain of your Slack workspace. E.g., for `my-domain.slack.com`, `<team-domain>` should be `my-domain`.
+    - `<randome-token-x>` - Random token. You can generate a random token with `ping -c 1 yahoo.com |md5 | head -c24; echo`. 
+- Edit `docker-compose.yaml`, replace `<local-backup-dir>` with a local path. This is where the database dumps will be created.
 
-Clone the SlackArchive docker repository:
-```
-git clone https://github.com/ashb/slackarchive-docker
-```
-
-Copy `slackarchive/config.yaml.sample` to `slackarchive/config.yaml`, and replace all the values within `{...}` with the appropriate values you want. Any place with a token or key, ensure those are random. You can generate a random value on the command line with bash using the following command: `openssl rand -base64 8 |md5 |head -c24;echo` (if you have OpenSSL) or without `ping -c 1 yahoo.com |md5 | head -c24; echo`. We avoid using `/dev/urandom` in case you are not using a UNIX-based machine.
-
-Follow the same instructions as above for `slackarchive-bot/config.yaml.sample`. Ensure you put the config file in the same folder as where the sample file is.
-
-Make sure you change at least the password (and ideally the username) of the MongoDB user in `mongodb/docker-entrypoint-initdb.d/slackarchive.js`. By default, the user is `slackarchive` and the password is `1234`. NOTE: if you change these, you *must* update the values in the other two configuration files, **AND** change the MongoDB URI/URL string in the `docker-compose.yaml` file under the `slackarchive` directive.
-
-If you want additional security, change the MongoDB root username and password in the `docker-compose.yaml` file under the `mongodb` directive and environment variables.
-
-With all of these configuration options updates, you should now be able to start SlackArchive using the following commands:
+## Build the Images
 
 ```
-# create network
-docker network create slackarchive
-
-# create elasticsearch and mongodb and wait to be started
-docker-compose run --rm wait_for_dependencies
-
-# initialize elasticsearch and mongodb 
-docker-compose run --rm slackarchive-init
-
-# start slackarchive
-docker-compose up slackarchive
-
-# start slackarchive-bot
-docker-compose up slackarchive-bot
+make
 ```
 
-Now SlackArchive has been started and you can access it at http://127.0.0.1:8080/.
+## Prepare the Database
 
-## Components
+If you are setting up a new archive, you need an empty database with proper schemes.
+- Edit `docker-compose.yaml`, set `services.slackarchive.command` to `[init]`.
+- Run `docker-compose up`.
 
-SlackArchive consists of the following components:
+If you are recovering from a previous dump of database.
+- Put the dump file in `<local-backup-dir>` (see [Configuration](#configuration)).
+- Edit `docker-compose.yaml`, remove `services.slackarchive` and everything in it.
+- Run `docker-compose up`.
+- Login to the database container: `docker exec -it $(docker ps -aqf'name=slackarchive_postgres') /bin/bash`.
+- Restore from the dump file: `psql -U postgres -f backups/<your-dump-file>`.
 
-* SlackArchive (https://github.com/dutchcoders/slackarchive)
-* SlackArchive App (https://github.com/dutchcoders/slackarchive-app)
-* SlackArchive ArchiveBot (https://github.com/dutchcoders/slackarchive-bot)
-* SlackArchive Importer (https://github.com/dutchcoders/slackarchive-import)
+## Start the Service
 
-* Docker environment (https://github.com/dutchcoders/slackarchive-docker)
-* Docker Init (https://github.com/dutchcoders/slackarchive-init)
+- Revert any changes you have made on `docker-compose.yaml` in [Prepare the Database](#prepare-the-database). (Changes made in [Configuration](#configuration) should be kept.)
+- Run `docker-compose up`.
 
-## Creators
+## Backup
 
-Remco Verhoef (@remco_verhoef) and Kaspars Sprogis.
-
-## Copyright and license
-
-Code and documentation copyright 2018 DutchCoders.
-
-Code released under [Affero General Public License](LICENSE).
+- Make sure the service is started.
+- Create a dump of the datebase: `docker exec -it $(docker ps -aqf'name=slackarchive_postgres') /backup.sh`.

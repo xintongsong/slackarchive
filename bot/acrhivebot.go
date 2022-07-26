@@ -43,15 +43,17 @@ type archiveClient struct {
 	ab     *archiveBot
 	tokens config.TokenConfig
 	Team   *models.Team
+	SyncIntervalMinute int
+	SyncRecentDay int
 }
 
 // Map of last-message we've received per channel.
 type lastMessageDates []struct {
 	ID         string
-	MostRecent *time.Time
+	FirstSince *time.Time
 }
 
-func (ac *archiveClient) Sync(ctx context.Context) error {
+func (ac *archiveClient) Sync(ctx context.Context, since *time.Time) error {
 	db := ac.ab.session
 
 	log.Info("Syncing team (%s)", ac.Team.ID)
@@ -72,9 +74,10 @@ func (ac *archiveClient) Sync(ctx context.Context) error {
 	var exists bool
 	if exists, err = db.Model(ac.Team).WherePK().Exists(); exists {
 		_, err = db.Model(ac.Team).WherePK().Update(ac.Team)
-	} else if err != pg.ErrNoRows {
-	} else {
+	} else if err == nil {
 		_, err = db.Model(ac.Team).Insert()
+	} else {
+		log.Error(err.Error())
 	}
 
 	if err != nil {
@@ -118,7 +121,7 @@ func (ac *archiveClient) Sync(ctx context.Context) error {
 	log.Info("Syncing channels (%s)", ac.Team.ID)
 
 	params := slack.GetConversationsParameters{
-		ExcludeArchived: "false",
+		ExcludeArchived: false,
 		Limit:           100,
 	}
 
@@ -171,13 +174,13 @@ func (ac *archiveClient) Sync(ctx context.Context) error {
 	// the latest message date per channel and "backfill" any gaps. Since we
 	// have captured the date we can also start the RTM stream and capture new
 	// messages without worrying about missing anything
-	latest, err := ac.getLatestMessageDatePerChannel()
+	latest, err := ac.getFirstMessageDatePerChannelSince(since)
 	if err != nil {
 		return errors.Wrapf(err, "could not get latest message dates per channel (%s)", ac.Team.ID)
 	}
 
 	for _, chanInfo := range latest {
-		if err := ac.syncChannelMessages(ctx, chanInfo.ID, chanInfo.MostRecent); err != nil {
+		if err := ac.syncChannelMessages(ctx, chanInfo.ID, chanInfo.FirstSince); err != nil {
 			log.Error("Error syncing channel messages(%s): %s", chanInfo.ID, err.Error())
 		}
 	}
@@ -185,14 +188,17 @@ func (ac *archiveClient) Sync(ctx context.Context) error {
 	return nil
 }
 
-func (ac *archiveClient) getLatestMessageDatePerChannel() (res lastMessageDates, err error) {
+func (ac *archiveClient) getFirstMessageDatePerChannelSince(since *time.Time) (res lastMessageDates, err error) {
 	db := ac.ab.session
-	err = db.Model((*models.Channel)(nil)).
+	query := db.Model((*models.Channel)(nil)).
 		Column("id").
-		ColumnExpr("max(messages.timestamp) AS most_recent").
-		Join("LEFT JOIN messages ON channel.id = messages.channel_id").
-		Group("channel.id").
-		Select(&res)
+		ColumnExpr("min(messages.timestamp) AS first_since").
+		Join("LEFT JOIN messages ON channel.id = messages.channel_id")
+	if since != nil {
+		query = query.Where("messages.timestamp > ?", since)
+	}
+	query = query.Group("channel.id")
+	err = query.Select(&res)
 
 	if err != nil && err != pg.ErrNoRows {
 		return res, err
@@ -200,7 +206,7 @@ func (ac *archiveClient) getLatestMessageDatePerChannel() (res lastMessageDates,
 	return res, nil
 }
 
-func (ac *archiveClient) syncChannelMessages(ctx context.Context, ChannelID string, MostRecent *time.Time) error {
+func (ac *archiveClient) syncChannelMessages(ctx context.Context, ChannelID string, Since *time.Time) error {
 	log.Info("Syncing latest channel messages: %s (%s)", ChannelID, ac.Team.ID)
 
 	params := &slack.GetConversationHistoryParameters{
@@ -208,8 +214,8 @@ func (ac *archiveClient) syncChannelMessages(ctx context.Context, ChannelID stri
 		Limit:     200,
 	}
 
-	if MostRecent != nil {
-		params.Oldest = models.TimeToTimestamp(*MostRecent)
+	if Since != nil {
+		params.Oldest = models.TimeToTimestamp(*Since)
 		log.Debug("Asking for messages after %s", params.Oldest)
 	}
 
@@ -218,6 +224,12 @@ func (ac *archiveClient) syncChannelMessages(ctx context.Context, ChannelID stri
 	var err error
 
 	for err == nil {
+		// joining a channel that the bot is already in should not get error
+		_, _, _, err = ac.JoinConversation(params.ChannelID)
+		if err != nil {
+			return errors.Wrap(err, "Error joining channel")
+		}
+
 		history, err = ac.GetConversationHistoryContext(ctx, params)
 
 		if err == nil {
@@ -226,8 +238,18 @@ func (ac *archiveClient) syncChannelMessages(ctx context.Context, ChannelID stri
 				if err := ac.NewMessageForChannel(&message.Msg, ChannelID); err != nil {
 					panic(err)
 				}
+				imported++
+
+				if message.Timestamp == message.Timestamp { // is parent of a thread
+					importedReplies, e := ac.syncThreadMessages(ctx, ChannelID, message.Timestamp)
+					imported += importedReplies
+
+					if e != nil {
+						err = nil
+						break
+					}
+				}
 			}
-			imported += len(history.Messages)
 
 			if !history.HasMore {
 				break
@@ -252,6 +274,48 @@ func (ac *archiveClient) syncChannelMessages(ctx context.Context, ChannelID stri
 
 	log.Info("Syncing latest channel messages completed: %s - %d new messages", ChannelID, imported)
 	return nil
+}
+
+func (ac *archiveClient) syncThreadMessages(ctx context.Context, ChannelID string, parentTimeStamp string) (int, error) {
+	log.Debug("Syncing thread messages: %s", parentTimeStamp)
+	params := &slack.GetConversationRepliesParameters{
+		ChannelID: ChannelID,
+		Timestamp: parentTimeStamp,
+	}
+
+	var imported = 0
+	var err error
+
+	for err == nil {
+		replies, hasMore, nextCursor, e := ac.GetConversationRepliesContext(ctx, params)
+		if e == nil {
+			for _, reply := range replies {
+				if err := ac.NewMessageForChannel(&reply.Msg, ChannelID); err != nil {
+					panic(err)
+				}
+			}
+			imported += len(replies)
+
+			params.Cursor = nextCursor
+			if !hasMore {
+				break
+			}
+		} else if rateLimitedError, ok := e.(*slack.RateLimitedError); ok {
+			log.Infof("Rate limited for %s", rateLimitedError.RetryAfter)
+			select {
+			case <-ctx.Done():
+				err = ctx.Err()
+			case <-time.After(rateLimitedError.RetryAfter):
+				err = nil
+			}
+		}
+	}
+
+	if err == nil {
+		log.Debug("Syncing thread messages completed: %s - %d messages", parentTimeStamp, imported)
+	}
+
+	return imported, err
 }
 
 /* ImportBotUser will create a record for the given botID if it doesn't already
@@ -339,7 +403,7 @@ Loop:
 
 				// Re-sync as we might have missed messages in the mean time
 				if ev.ConnectionCount > 0 {
-					go ac.Sync(ctx)
+					go ac.Sync(ctx, nil)
 				}
 			case *slack.MessageEvent:
 				msg := slack.Message(*msg.Data.(*slack.MessageEvent))
@@ -493,7 +557,7 @@ Loop:
 	}
 }
 
-func (ab *archiveBot) NewArchiveClient(token config.TokenConfig) (*archiveClient, error) {
+func (ab *archiveBot) NewArchiveClient(token config.TokenConfig, config config.Config) (*archiveClient, error) {
 	ac := archiveClient{
 		slack.New(
 			token.OAuthToken,
@@ -502,6 +566,8 @@ func (ab *archiveBot) NewArchiveClient(token config.TokenConfig) (*archiveClient
 		ab,
 		token,
 		nil,
+		config.SyncIntervalMinute,
+		config.SyncRecentDay,
 	}
 
 	var team *slack.TeamInfo
@@ -533,13 +599,39 @@ func (ac *archiveClient) Start() {
 			}
 		}()
 
-		if err := ac.Sync(context.Background()); err != nil {
-			log.Error("Sync error: %s", err.Error())
-			panic(err)
+		syncFunc := func(){
+			since := time.Now().Add(time.Hour * time.Duration(-24 * ac.SyncRecentDay))
+			if err := ac.Sync(context.Background(), &since); err != nil {
+				log.Error("Sync error: %s", err.Error())
+				panic(err)
+			}
 		}
 
-		ac.Bot()
+		syncFunc()
+		ticker := time.NewTicker(time.Minute * time.Duration(ac.SyncIntervalMinute))
+		for range ticker.C {
+			syncFunc()
+		}
 	}()
+}
+
+func (ac *archiveClient) RetrieveAll() {
+	defer func() {
+		if err := recover(); err != nil {
+			trace := make([]byte, 1024)
+			count := runtime.Stack(trace, true)
+			log.Error("Error: %s", err)
+			log.Debug("Stack of %d bytes: %s", count, trace)
+			return
+		}
+	}()
+
+	if err := ac.Sync(context.Background(), nil); err != nil {
+		log.Error("Sync error: %s", err.Error())
+		panic(err)
+	}
+
+	log.Info("Init finished. Press 'Ctrl + C' to terminate.")
 }
 
 func (ab *archiveBot) worker() {
@@ -577,7 +669,7 @@ func (ab *archiveBot) Start() {
 		}*/
 		log.Info("Starting archive bot for token: %s", token.BotToken)
 
-		ac, err := ab.NewArchiveClient(token)
+		ac, err := ab.NewArchiveClient(token, *ab.config)
 		if err == nil {
 		} else if err.Error() == "invalid_auth" || err.Error() == "account_inactive" {
 			continue
@@ -587,5 +679,24 @@ func (ab *archiveBot) Start() {
 		}
 
 		ac.Start()
+	}
+}
+
+func (ab *archiveBot) RetrieveAll() {
+	go ab.worker()
+
+	for _, token := range ab.config.BotTokens {
+		log.Info("Starting archive bot for token: %s", token.BotToken)
+
+		ac, err := ab.NewArchiveClient(token, *ab.config)
+		if err == nil {
+		} else if err.Error() == "invalid_auth" || err.Error() == "account_inactive" {
+			continue
+		} else if err != nil {
+			log.Error("Error starting client %s: %s", token, err)
+			continue
+		}
+
+		ac.RetrieveAll()
 	}
 }

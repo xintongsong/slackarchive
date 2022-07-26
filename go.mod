@@ -15,7 +15,7 @@ require (
 	github.com/onsi/gomega v1.9.0 // indirect
 	github.com/op/go-logging v0.0.0-20160211212156-b2cb9fa56473
 	github.com/pkg/errors v0.9.1
-	github.com/slack-go/slack v0.8.2
+	github.com/slack-go/slack v0.11.0
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tappleby/slack_auth_proxy v0.0.0-20150220022049-8628dfb9b447
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2

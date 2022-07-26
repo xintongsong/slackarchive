@@ -1,0 +1,19 @@
+services:
+  slackarchive:
+    image: slackarchive
+    ports:
+      - 8080:8080
+    volumes:
+      - ${PWD}/config.yaml:/slackarchive/config.yaml
+    depends_on:
+      - postgres
+    entrypoint: ["./wait-for-it.sh", "postgres:5432", "--", "./slackarchive", "--config", "./config.yaml"]
+    command: ["run"] # use `init` for the first run
+
+  postgres:
+      image: postgres
+      environment:
+        - POSTGRES_PASSWORD=postgres
+      volumes:
+        - ${PWD}/backup.sh:/backup.sh
+        - <local-backup-dir>:/backups

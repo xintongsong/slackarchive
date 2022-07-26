@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-pg/pg/orm"
 	"math/rand"
 	"os"
 	_ "os/exec"
@@ -104,6 +105,15 @@ func main() {
 				},
 			},
 		},
+		{
+			Name: "init",
+			Action: initArchive,
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: "debug, D",
+				},
+			},
+		},
 	}
 
 	app.Run(os.Args)
@@ -175,5 +185,63 @@ func migrate(c *cli.Context) error {
 		fmt.Printf("version is %d\n", oldVersion)
 	}
 
+	return nil
+}
+
+func initArchive(c *cli.Context) error {
+	if err := initDb(c); err != nil {
+		return err
+	}
+
+	return firstRetrieve(c)
+}
+
+func initDb(c *cli.Context) error {
+	conf, err := config.Load(c.GlobalString("config"))
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	db, err := models.Connect(conf.Database.DSN, c.Bool("debug"))
+	if err != nil {
+		return err
+	}
+
+	err = db.Model(&models.Team{}).CreateTable(&orm.CreateTableOptions{IfNotExists: true})
+	if err != nil {
+		return err
+	}
+
+	err = db.Model(&models.User{}).CreateTable(&orm.CreateTableOptions{IfNotExists: true})
+	if err != nil {
+		return err
+	}
+
+	err = db.Model(&models.Channel{}).CreateTable(&orm.CreateTableOptions{IfNotExists: true})
+	if err != nil {
+		return err
+	}
+
+	err = db.Model(&models.Message{}).CreateTable(&orm.CreateTableOptions{IfNotExists: true})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func firstRetrieve(c *cli.Context) error {
+	conf, err := config.Load(c.GlobalString("config"))
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	db, err := models.Connect(conf.Database.DSN, c.Bool("debug"))
+	if err != nil {
+		return err
+	}
+
+	bot := bot.New(conf, db)
+	bot.RetrieveAll()
 	return nil
 }

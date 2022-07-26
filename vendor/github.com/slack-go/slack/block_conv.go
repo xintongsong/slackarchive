@@ -2,9 +2,8 @@ package slack
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 type sumtype struct {
@@ -65,6 +64,8 @@ func (b *Blocks) UnmarshalJSON(data []byte) error {
 			block = &ImageBlock{}
 		case "input":
 			block = &InputBlock{}
+		case "rich_text":
+			block = &RichTextBlock{}
 		case "section":
 			block = &SectionBlock{}
 		default:
@@ -181,6 +182,8 @@ func (b *BlockElements) UnmarshalJSON(data []byte) error {
 			blockElement = &OverflowBlockElement{}
 		case "datepicker":
 			blockElement = &DatePickerBlockElement{}
+		case "timepicker":
+			blockElement = &TimePickerBlockElement{}
 		case "plain_text_input":
 			blockElement = &PlainTextInputBlockElement{}
 		case "checkboxes":

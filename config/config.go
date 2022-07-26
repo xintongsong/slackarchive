@@ -1,9 +1,8 @@
 package config
 
 import (
-	"io/ioutil"
-
 	yaml "gopkg.in/yaml.v2"
+	"io/ioutil"
 
 	"github.com/tappleby/slack_auth_proxy/slack"
 )
@@ -16,10 +15,6 @@ type TokenConfig struct {
 type Config struct {
 	Listen    string `yaml:"listen"`
 	ListenTLS string `yaml:"listen_tls"`
-
-	Bot struct {
-		Token string `yaml:"token"`
-	} `yaml:"bot"`
 
 	Team string `yaml:"team"`
 
@@ -41,7 +36,8 @@ type Config struct {
 
 	Data string `yaml:"data"`
 
-	SessionName string `yaml:"session_name"`
+	SyncIntervalMinute int `yaml:"sync_interval_minute"`
+	SyncRecentDay int `yaml:"sync_recent_day"`
 }
 
 func Load(path string) (*Config, error) {
@@ -74,6 +70,14 @@ func (c *Config) Load(path string) error {
 
 	if c.Listen == "" {
 		c.Listen = "127.0.0.1:8080"
+	}
+
+	if c.SyncIntervalMinute <= 0 {
+		c.SyncIntervalMinute = 60
+	}
+
+	if c.SyncRecentDay <= 0 {
+		c.SyncRecentDay = 30
 	}
 
 	err = c.init()

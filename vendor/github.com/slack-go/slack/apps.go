@@ -44,15 +44,18 @@ func (api *Client) ListEventAuthorizationsContext(ctx context.Context, eventCont
 }
 
 func (api *Client) UninstallApp(clientID, clientSecret string) error {
+	return api.UninstallAppContext(context.Background(), clientID, clientSecret)
+}
+
+func (api *Client) UninstallAppContext(ctx context.Context, clientID, clientSecret string) error {
 	values := url.Values{
-		"token":         {api.token},
 		"client_id":     {clientID},
 		"client_secret": {clientSecret},
 	}
 
 	response := SlackResponse{}
 
-	err := api.getMethod(context.Background(), "apps.uninstall", values, &response)
+	err := api.getMethod(ctx, "apps.uninstall", api.token, values, &response)
 	if err != nil {
 		return err
 	}
